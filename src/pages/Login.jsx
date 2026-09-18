@@ -1,7 +1,8 @@
+import { supabase } from '../supabase'
 import './Login.css'
 
 function Login() {
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     const formData = new FormData(event.currentTarget)
@@ -9,22 +10,17 @@ function Login() {
     const email = formData.get('email')
     const password = formData.get('password')
 
-    /*
-     * LOGIN TEMPORAL
-     *
-     * Esto es solamente para probar el flujo del administrador.
-     * Más adelante lo reemplazaremos por Supabase Auth.
-     */
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-    if (
-      email === 'admin@planolabs.com' &&
-      password === 'admin123'
-    ) {
-      window.location.href = '/admin/dashboard'
+    if (error) {
+      alert('Email o contraseña incorrectos.')
       return
     }
 
-    alert('Email o contraseña incorrectos.')
+    window.location.href = '/admin/dashboard'
   }
 
   return (

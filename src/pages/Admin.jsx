@@ -1,8 +1,27 @@
 import { useEffect, useState } from 'react'
+import { supabase } from '../supabase'
 import './Admin.css'
 
 function Admin() {
+  const [checkingSession, setCheckingSession] = useState(true)
   const [activeSection, setActiveSection] = useState('dashboard')
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        window.location.href = '/admin'
+        return
+      }
+
+      setCheckingSession(false)
+    }
+
+    checkSession()
+  }, [])
 
   const defaultSiteContent = {
     home: {
@@ -182,10 +201,6 @@ function Admin() {
     }
   })
 
-  /* =========================
-     CATEGORÍAS
-  ========================= */
-
   const defaultCategories = [
     {
       id: 1,
@@ -227,10 +242,6 @@ function Admin() {
       return defaultCategories
     }
   })
-
-  /* =========================
-     PUBLICACIONES
-  ========================= */
 
   const defaultPublications = [
     {
@@ -366,10 +377,6 @@ function Admin() {
     }
   }, [publications])
 
-  /* =========================
-     PORTFOLIO
-  ========================= */
-
   const defaultPortfolio = [
     {
       id: 1,
@@ -474,10 +481,6 @@ function Admin() {
     }
   }, [portfolio])
 
-  /* =========================
-     MENÚ
-  ========================= */
-
   const menuItems = [
     {
       id: 'dashboard',
@@ -541,10 +544,6 @@ function Admin() {
 
   const currentSection = sectionTitles[activeSection]
 
-  /* =========================
-     CONTENIDO
-  ========================= */
-
   const updateContent = (
     section,
     field,
@@ -558,10 +557,6 @@ function Admin() {
       },
     }))
   }
-
-  /* =========================
-     GUARDAR CONFIGURACIÓN
-  ========================= */
 
   const saveSiteContent = () => {
     try {
@@ -595,10 +590,6 @@ function Admin() {
     }
   }
 
-  /* =========================
-     GUARDAR CATEGORÍAS
-  ========================= */
-
   const saveCategories = () => {
     try {
       localStorage.setItem(
@@ -620,10 +611,6 @@ function Admin() {
       )
     }
   }
-
-  /* =========================
-     SERVICIOS
-  ========================= */
 
   const updateService = (
     id,
@@ -678,10 +665,6 @@ function Admin() {
     })
   }
 
-  /* =========================
-     NOSOTROS
-  ========================= */
-
   const updateAboutPoint = (
     id,
     field,
@@ -735,10 +718,6 @@ function Admin() {
     })
   }
 
-  /* =========================
-     CATEGORÍAS
-  ========================= */
-
   const addCategory = () => {
     setCategories((current) => [
       ...current,
@@ -776,10 +755,6 @@ function Admin() {
       ),
     )
   }
-
-  /* =========================
-     PUBLICACIONES
-  ========================= */
 
   const addPublication = () => {
     setPublications((current) => {
@@ -852,10 +827,6 @@ function Admin() {
       ),
     )
   }
-
-  /* =========================
-     PROCESADOR DE IMÁGENES
-  ========================= */
 
   const optimizeImage = (
     file,
@@ -960,10 +931,6 @@ function Admin() {
 
       reader.readAsDataURL(file)
     })
-
-  /* =========================
-     IMÁGENES PUBLICACIONES
-  ========================= */
 
   const handlePublicationImages = async (
     id,
@@ -1156,10 +1123,6 @@ function Admin() {
       ),
     )
   }
-
-  /* =========================
-     PORTFOLIO
-  ========================= */
 
   const addPortfolioProject = () => {
     setPortfolio((current) => {
@@ -1475,10 +1438,6 @@ function Admin() {
     }
   }
 
-  /* =========================
-     CAMPOS
-  ========================= */
-
   const renderField = (
     label,
     value,
@@ -1509,6 +1468,10 @@ function Admin() {
       )}
     </label>
   )
+
+  if (checkingSession) {
+    return null
+  }
 
   return (
     <main className="admin-layout">
@@ -1575,13 +1538,17 @@ function Admin() {
             Ver sitio
           </a>
 
-          <a
-            href="/admin"
+          <button
+            type="button"
             className="admin-sidebar-link admin-logout"
+            onClick={async () => {
+              await supabase.auth.signOut()
+              window.location.href = '/admin'
+            }}
           >
             <span>←</span>
             Cerrar sesión
-          </a>
+          </button>
 
         </div>
 
@@ -1656,10 +1623,6 @@ function Admin() {
             </div>
 
           </div>
-
-          {/* =========================
-              DASHBOARD
-          ========================= */}
 
           {activeSection ===
             'dashboard' && (
@@ -1921,10 +1884,6 @@ function Admin() {
 
             </div>
           )}
-
-          {/* =========================
-              CONFIGURACIÓN
-          ========================= */}
 
           {activeSection ===
             'configuracion' && (
@@ -2377,10 +2336,6 @@ function Admin() {
             </div>
           )}
 
-          {/* =========================
-              CATEGORÍAS
-          ========================= */}
-
           {activeSection ===
             'categorias' && (
             <div className="admin-settings">
@@ -2504,10 +2459,6 @@ function Admin() {
 
             </div>
           )}
-
-          {/* =========================
-              PUBLICACIONES
-          ========================= */}
 
           {activeSection ===
             'publicaciones' && (
@@ -3044,10 +2995,6 @@ function Admin() {
 
             </div>
           )}
-
-          {/* =========================
-              PORTFOLIO
-          ========================= */}
 
           {activeSection ===
             'portfolio' && (
