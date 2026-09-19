@@ -1,12 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-
 import './App.css'
-
 import logo from './assets/logo.png'
-
 import Login from './pages/Login.jsx'
 import Admin from './pages/Admin.jsx'
-
 import {
   CMS_KEYS,
   loadDocument,
@@ -24,14 +20,12 @@ const DEFAULT_SITE_CONTENT = {
       'Diseñamos experiencias digitales que combinan estrategia, tecnología y creatividad.',
     button: 'Conocé nuestros servicios',
   },
-
   services: {
     eyebrow: '01 / SERVICIOS',
     title: 'Soluciones digitales con intención.',
     description:
       'Combinamos creatividad, tecnología y estrategia para transformar ideas en proyectos digitales con propósito.',
   },
-
   about: {
     eyebrow: '02 / NOSOTROS',
     title: 'Ideas que encuentran su forma.',
@@ -40,7 +34,6 @@ const DEFAULT_SITE_CONTENT = {
     description:
       'Desarrollamos soluciones digitales pensadas para marcas, proyectos y personas que buscan transformar una idea en algo real.',
   },
-
   contact: {
     eyebrow: '05 / CONTACTO',
     title: 'Hagamos algo realidad.',
@@ -100,12 +93,6 @@ const DEFAULT_ABOUT_POINTS = [
   },
 ]
 
-/*
- * Renderiza un título editable desde el administrador.
- *
- * Para conservar el estilo visual de la marca,
- * las dos últimas palabras se resaltan con el acento.
- */
 function renderHighlightedTitle(title) {
   const text = String(title || '').trim()
   const words = text.split(/\s+/).filter(Boolean)
@@ -125,9 +112,6 @@ function renderHighlightedTitle(title) {
   )
 }
 
-/*
- * Carga la configuración general del sitio.
- */
 async function loadSiteContent() {
   try {
     const savedContent = await loadDocument(
@@ -156,9 +140,6 @@ async function loadSiteContent() {
   )
 }
 
-/*
- * Carga los servicios.
- */
 async function loadServices() {
   try {
     const savedServices = await loadDocument(
@@ -187,9 +168,6 @@ async function loadServices() {
   return DEFAULT_SERVICES
 }
 
-/*
- * Carga los puntos de Nosotros.
- */
 async function loadAboutPoints() {
   try {
     const savedAboutPoints = await loadDocument(
@@ -853,6 +831,7 @@ function DetailModal({
           </div>
         ) : (
           <div
+            className="detail-catalog-layout"
             style={{
               display: 'grid',
               gridTemplateColumns:
@@ -862,7 +841,7 @@ function DetailModal({
                 '36px',
             }}
           >
-            <div>
+            <div className="detail-catalog-content">
               {item.description && (
                 <div
                   style={{
@@ -969,6 +948,7 @@ function DetailModal({
             </div>
 
             <div
+              className="detail-catalog-actions"
               style={{
                 borderLeft:
                   '1px solid rgba(245,245,242,0.12)',
@@ -1149,6 +1129,7 @@ function EmailModal({
           data.error ||
             CONTACT_GENERIC_ERROR,
         )
+
         setStatus('error')
         return
       }
@@ -1537,6 +1518,7 @@ function EmailModal({
                 {isSending
                   ? 'Enviando...'
                   : 'Enviar consulta'}
+
                 <span>↗</span>
               </button>
             </form>
@@ -1578,10 +1560,6 @@ function PublicSite() {
 
   const detailHistoryRef = useRef(false)
 
-  /*
-   * Evita que una carga vieja de Supabase
-   * sobrescriba una carga más reciente.
-   */
   const loadRequestRef = useRef(0)
 
   const loadPublicData = async () => {
@@ -1789,12 +1767,6 @@ function PublicSite() {
         setPortfolio([])
       }
 
-      /*
-       * IMPORTANTE:
-       * Estas tres funciones son async.
-       * Antes se estaban pasando las Promises
-       * directamente a setState.
-       */
       const [
         loadedSiteContent,
         loadedServices,
@@ -1982,7 +1954,6 @@ function PublicSite() {
 
   const openEmail = () => {
     setShowEmailModal(true)
-
     document.body.style.overflow =
       'hidden'
   }

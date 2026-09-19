@@ -914,6 +914,7 @@
 }
 
 /* Anula cualquier estilo especial anterior */
+
 .contact-button-primary {
   border-color: #F5F5F2;
   background: transparent;
@@ -1065,5 +1066,45 @@
   .contact-footer {
     flex-direction: column;
     gap: 12px;
+  }
+
+  /* =========================
+     DETALLE CATÁLOGO - MÓVIL
+     ========================= */
+
+  .detail-catalog-layout {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+  }
+
+  .detail-catalog-content {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .detail-catalog-content > div {
+    margin-bottom: 24px !important;
+  }
+
+  .detail-catalog-content > div:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .detail-catalog-content p {
+    line-height: 1.65 !important;
+  }
+
+  .detail-catalog-actions {
+    width: 100%;
+    min-width: 0;
+    border-left: none !important;
+    border-top: 1px solid rgba(245, 245, 242, 0.12);
+    padding-left: 0 !important;
+    padding-top: 24px;
+  }
+
+  .detail-catalog-actions .contact-button {
+    width: 100% !important;
+    min-height: 58px;
   }
 }
