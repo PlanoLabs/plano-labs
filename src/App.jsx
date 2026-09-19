@@ -5,7 +5,6 @@ import './App.css'
 import logo from './assets/logo.png'
 
 import Login from './pages/Login.jsx'
-
 import Admin from './pages/Admin.jsx'
 
 import {
@@ -61,7 +60,6 @@ const DEFAULT_SERVICES = [
     description:
       'Diseñamos sitios web modernos, rápidos y pensados para convertir ideas en experiencias digitales.',
   },
-
   {
     id: 2,
     number: '02',
@@ -69,7 +67,6 @@ const DEFAULT_SERVICES = [
     description:
       'Integramos inteligencia artificial para automatizar procesos, potenciar negocios y crear nuevas posibilidades.',
   },
-
   {
     id: 3,
     number: '03',
@@ -87,7 +84,6 @@ const DEFAULT_ABOUT_POINTS = [
     description:
       'Convertimos conceptos en experiencias digitales.',
   },
-
   {
     id: 2,
     number: '02',
@@ -95,7 +91,6 @@ const DEFAULT_ABOUT_POINTS = [
     description:
       'Pensamos cada proyecto con una dirección clara.',
   },
-
   {
     id: 3,
     number: '03',
@@ -107,13 +102,12 @@ const DEFAULT_ABOUT_POINTS = [
 
 /*
  * Renderiza un título editable desde el administrador.
- * El texto SIEMPRE sale de los datos. Para conservar el estilo
- * visual de la marca, las dos últimas palabras se resaltan
- * con el acento (<span>), igual que en el diseño original.
+ *
+ * Para conservar el estilo visual de la marca,
+ * las dos últimas palabras se resaltan con el acento.
  */
 function renderHighlightedTitle(title) {
   const text = String(title || '').trim()
-
   const words = text.split(/\s+/).filter(Boolean)
 
   if (words.length < 3) {
@@ -131,6 +125,9 @@ function renderHighlightedTitle(title) {
   )
 }
 
+/*
+ * Carga la configuración general del sitio.
+ */
 async function loadSiteContent() {
   try {
     const savedContent = await loadDocument(
@@ -159,6 +156,9 @@ async function loadSiteContent() {
   )
 }
 
+/*
+ * Carga los servicios.
+ */
 async function loadServices() {
   try {
     const savedServices = await loadDocument(
@@ -187,6 +187,9 @@ async function loadServices() {
   return DEFAULT_SERVICES
 }
 
+/*
+ * Carga los puntos de Nosotros.
+ */
 async function loadAboutPoints() {
   try {
     const savedAboutPoints = await loadDocument(
@@ -539,21 +542,18 @@ function MediaCarousel({
                   setCurrentIndex(index)
                 }
                 style={{
-                  flex:
-                    '0 0 auto',
+                  flex: '0 0 auto',
                   width: '72px',
                   height: '54px',
                   padding: 0,
                   overflow: 'hidden',
                   border:
-                    index ===
-                    currentIndex
+                    index === currentIndex
                       ? '2px solid #B8FF3D'
                       : '1px solid rgba(245,245,242,0.18)',
                   background:
                     '#0B0D10',
-                  cursor:
-                    'pointer',
+                  cursor: 'pointer',
                 }}
               >
                 {mediaItem.type ===
@@ -606,8 +606,7 @@ function MediaCarousel({
             textAlign: 'center',
           }}
         >
-          {currentIndex + 1} /{' '}
-          {media.length}
+          {currentIndex + 1} / {media.length}
         </p>
       )}
     </div>
@@ -627,8 +626,7 @@ function DetailModal({
   }
 
   const features =
-    typeof item.features ===
-    'string'
+    typeof item.features === 'string'
       ? item.features
           .split('\n')
           .map((feature) =>
@@ -644,10 +642,12 @@ function DetailModal({
   const isPortfolio =
     type === 'portfolio'
 
-  const whatsappLink = whatsapp
-    ? `https://wa.me/${String(
-        whatsapp,
-      ).replace(/\D/g, '')}`
+  const cleanWhatsapp = String(
+    whatsapp || '',
+  ).replace(/\D/g, '')
+
+  const whatsappLink = cleanWhatsapp
+    ? `https://wa.me/${cleanWhatsapp}`
     : '#contacto'
 
   return (
@@ -686,8 +686,7 @@ function DetailModal({
           onClick={onClose}
           aria-label="Cerrar"
           style={{
-            position:
-              'absolute',
+            position: 'absolute',
             top: '16px',
             right: '16px',
             width: '40px',
@@ -773,9 +772,7 @@ function DetailModal({
                     '30px',
                 }}
               >
-                <p
-                  className="section-label"
-                >
+                <p className="section-label">
                   SOBRE EL PROYECTO
                 </p>
 
@@ -1083,11 +1080,9 @@ function EmailModal({
       clientEmail: '',
       phone: '',
       message: '',
-      // Campo trampa anti-spam: las personas no lo ven ni lo completan.
       website: '',
     })
 
-  // idle | sending | success | error
   const [status, setStatus] =
     useState('idle')
 
@@ -1154,9 +1149,7 @@ function EmailModal({
           data.error ||
             CONTACT_GENERIC_ERROR,
         )
-
         setStatus('error')
-
         return
       }
 
@@ -1583,25 +1576,36 @@ function PublicSite() {
   const [showEmailModal, setShowEmailModal] =
     useState(false)
 
-  // Controla si existe una entrada de historial
-  // correspondiente al detalle actualmente abierto.
   const detailHistoryRef = useRef(false)
 
+  /*
+   * Evita que una carga vieja de Supabase
+   * sobrescriba una carga más reciente.
+   */
+  const loadRequestRef = useRef(0)
+
   const loadPublicData = async () => {
+    const requestId =
+      ++loadRequestRef.current
+
     try {
-      let publications = await loadDocument(
-        CMS_KEYS.PUBLICATIONS,
-      )
+      let publications =
+        await loadDocument(
+          CMS_KEYS.PUBLICATIONS,
+        )
 
       if (!Array.isArray(publications)) {
-        publications = readLocalFallback(
-          'plano-labs-publications',
-          [],
-        )
+        publications =
+          readLocalFallback(
+            'plano-labs-publications',
+            [],
+          )
       }
 
-      if (Array.isArray(publications) && publications.length) {
-
+      if (
+        Array.isArray(publications) &&
+        publications.length
+      ) {
         const publishedPublications =
           publications
             .filter(
@@ -1614,18 +1618,15 @@ function PublicSite() {
                 index,
               ) => ({
                 ...publication,
-
                 order:
                   Number(
                     publication.order,
                   ) ||
                   index + 1,
-
                 images:
                   normalizeImages(
                     publication.images,
                   ),
-
                 videos:
                   normalizeVideos(
                     publication.videos ||
@@ -1635,7 +1636,6 @@ function PublicSite() {
                           ]
                         : []),
                   ),
-
                 coverImage:
                   publication.coverImage ||
                   publication.images?.[0]
@@ -1645,12 +1645,8 @@ function PublicSite() {
             )
             .sort(
               (a, b) =>
-                Number(
-                  a.order,
-                ) -
-                Number(
-                  b.order,
-                ),
+                Number(a.order) -
+                Number(b.order),
             )
             .map(
               (
@@ -1658,7 +1654,6 @@ function PublicSite() {
                 index,
               ) => ({
                 ...publication,
-
                 number:
                   String(
                     index + 1,
@@ -1669,6 +1664,13 @@ function PublicSite() {
               }),
             )
 
+        if (
+          requestId !==
+          loadRequestRef.current
+        ) {
+          return
+        }
+
         setCatalog(
           publishedPublications,
         )
@@ -1676,22 +1678,25 @@ function PublicSite() {
         setCatalog([])
       }
 
-      let savedPortfolio = await loadDocument(
-        CMS_KEYS.PORTFOLIO,
-      )
+      let savedPortfolio =
+        await loadDocument(
+          CMS_KEYS.PORTFOLIO,
+        )
 
       if (!Array.isArray(savedPortfolio)) {
-        savedPortfolio = readLocalFallback(
-          'plano-labs-portfolio',
-          [],
-        )
+        savedPortfolio =
+          readLocalFallback(
+            'plano-labs-portfolio',
+            [],
+          )
       }
 
-      if (Array.isArray(savedPortfolio) && savedPortfolio.length) {
-        const projects = savedPortfolio
-
+      if (
+        Array.isArray(savedPortfolio) &&
+        savedPortfolio.length
+      ) {
         const publishedProjects =
-          projects
+          savedPortfolio
             .filter(
               (project) =>
                 project.published,
@@ -1702,21 +1707,17 @@ function PublicSite() {
                 index,
               ) => ({
                 ...project,
-
                 order:
                   Number(
                     project.order,
                   ) ||
                   index + 1,
-
                 link:
                   project.link ||
                   '',
-
                 shortDescription:
                   project.shortDescription ||
                   '',
-
                 images:
                   normalizeImages(
                     project.images ||
@@ -1729,13 +1730,11 @@ function PublicSite() {
                           ]
                         : []),
                   ),
-
                 screenshots:
                   normalizeImages(
                     project.screenshots ||
                       [],
                   ),
-
                 videos:
                   normalizeVideos(
                     project.videos ||
@@ -1745,7 +1744,6 @@ function PublicSite() {
                           ]
                         : []),
                   ),
-
                 coverImage:
                   project.coverImage ||
                   project.image ||
@@ -1758,12 +1756,8 @@ function PublicSite() {
             )
             .sort(
               (a, b) =>
-                Number(
-                  a.order,
-                ) -
-                Number(
-                  b.order,
-                ),
+                Number(a.order) -
+                Number(b.order),
             )
             .map(
               (
@@ -1771,7 +1765,6 @@ function PublicSite() {
                 index,
               ) => ({
                 ...project,
-
                 number:
                   String(
                     index + 1,
@@ -1782,6 +1775,13 @@ function PublicSite() {
               }),
             )
 
+        if (
+          requestId !==
+          loadRequestRef.current
+        ) {
+          return
+        }
+
         setPortfolio(
           publishedProjects,
         )
@@ -1789,16 +1789,47 @@ function PublicSite() {
         setPortfolio([])
       }
 
-      setSiteContent(
+      /*
+       * IMPORTANTE:
+       * Estas tres funciones son async.
+       * Antes se estaban pasando las Promises
+       * directamente a setState.
+       */
+      const [
+        loadedSiteContent,
+        loadedServices,
+        loadedAboutPoints,
+      ] = await Promise.all([
         loadSiteContent(),
+        loadServices(),
+        loadAboutPoints(),
+      ])
+
+      if (
+        requestId !==
+        loadRequestRef.current
+      ) {
+        return
+      }
+
+      setSiteContent(
+        loadedSiteContent,
       )
 
       setServices(
-        loadServices(),
+        Array.isArray(
+          loadedServices,
+        )
+          ? loadedServices
+          : DEFAULT_SERVICES,
       )
 
       setAboutPoints(
-        loadAboutPoints(),
+        Array.isArray(
+          loadedAboutPoints,
+        )
+          ? loadedAboutPoints
+          : DEFAULT_ABOUT_POINTS,
       )
     } catch (error) {
       console.error(
@@ -1811,15 +1842,19 @@ function PublicSite() {
   useEffect(() => {
     loadPublicData()
 
+    const handleStorage = () => {
+      loadPublicData()
+    }
+
     window.addEventListener(
       'storage',
-      loadPublicData,
+      handleStorage,
     )
 
     return () => {
       window.removeEventListener(
         'storage',
-        loadPublicData,
+        handleStorage,
       )
     }
   }, [])
@@ -1842,18 +1877,11 @@ function PublicSite() {
     }
   }, [])
 
-  /*
-   * NUEVO:
-   * Escuchamos el botón Atrás del navegador.
-   *
-   * Cuando el usuario tiene una ficha abierta,
-   * la ficha ocupa una entrada del historial.
-   * Al volver atrás, cerramos solamente la ficha
-   * y dejamos al usuario en la sección donde estaba.
-   */
   useEffect(() => {
     const handlePopState = () => {
-      if (detailHistoryRef.current) {
+      if (
+        detailHistoryRef.current
+      ) {
         detailHistoryRef.current =
           false
 
@@ -1879,7 +1907,7 @@ function PublicSite() {
   }, [])
 
   const content =
-    siteContent
+    siteContent || DEFAULT_SITE_CONTENT
 
   const whatsappNumber =
     content.contact?.whatsapp ||
@@ -1901,21 +1929,15 @@ function PublicSite() {
     content.contact?.email ||
     DEFAULT_EMAIL
 
+  const cleanWhatsapp = String(
+    whatsappNumber || '',
+  ).replace(/\D/g, '')
+
   const whatsappLink =
-    whatsappNumber
-      ? `https://wa.me/${String(
-          whatsappNumber,
-        ).replace(
-          /\D/g,
-          '',
-        )}`
+    cleanWhatsapp
+      ? `https://wa.me/${cleanWhatsapp}`
       : '#contacto'
 
-  /*
-   * NUEVO:
-   * Abrir una ficha también crea una entrada
-   * en el historial del navegador.
-   */
   const openDetail = (
     item,
     type,
@@ -1926,7 +1948,8 @@ function PublicSite() {
     document.body.style.overflow =
       'hidden'
 
-    const detailHash = `${type}-${item.id}`
+    const detailHash =
+      `${type}-${item.id}`
 
     window.history.pushState(
       {
@@ -1942,14 +1965,6 @@ function PublicSite() {
       true
   }
 
-  /*
-   * NUEVO:
-   * Al cerrar mediante X, usamos history.back()
-   * para que el historial quede limpio.
-   *
-   * Si el cierre viene del botón Atrás,
-   * no hacemos otro history.back().
-   */
   const closeDetail = () => {
     if (
       detailHistoryRef.current
@@ -1975,7 +1990,6 @@ function PublicSite() {
   const closeEmail = () => {
     setShowEmailModal(false)
 
-    // Si hay una ficha abierta debajo, se mantiene el bloqueo de scroll.
     document.body.style.overflow =
       detailHistoryRef.current
         ? 'hidden'
@@ -2269,7 +2283,7 @@ function PublicSite() {
                     )
                   }
                   role="button"
-                  tabIndex="0"
+                  tabIndex={0}
                   onKeyDown={(
                     event,
                   ) => {
@@ -2412,7 +2426,7 @@ function PublicSite() {
                     )
                   }
                   role="button"
-                  tabIndex="0"
+                  tabIndex={0}
                   onKeyDown={(
                     event,
                   ) => {
@@ -2613,7 +2627,9 @@ function PublicSite() {
 
             <a
               href={`mailto:${contactEmail}`}
-              onClick={(event) => {
+              onClick={(
+                event,
+              ) => {
                 event.preventDefault()
                 openEmail()
               }}

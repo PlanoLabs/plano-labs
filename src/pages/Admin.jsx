@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import {
   CMS_KEYS,
+  formatCmsError,
   isDataUrl,
   loadDocument,
   mergeSiteContent,
@@ -617,7 +618,7 @@ function Admin() {
       )
 
       alert(
-        'No se pudieron guardar los cambios en Supabase. Revisá la tabla cms_documents y que estés logueado.',
+        `No se pudieron guardar los cambios. ${formatCmsError(error)}`,
       )
     } finally {
       setSaving(false)
@@ -638,7 +639,7 @@ function Admin() {
       )
 
       alert(
-        'No se pudieron guardar las categorías en Supabase.',
+        `No se pudieron guardar las categorías. ${formatCmsError(error)}`,
       )
     } finally {
       setSaving(false)
@@ -1152,7 +1153,7 @@ function Admin() {
       )
 
       alert(
-        'No se pudieron guardar las publicaciones en Supabase. Revisá el bucket site-media y la tabla cms_documents.',
+        `No se pudieron guardar las publicaciones. ${formatCmsError(error)}`,
       )
     } finally {
       setSaving(false)
@@ -1496,7 +1497,7 @@ function Admin() {
       )
 
       alert(
-        'No se pudo guardar el portfolio en Supabase. Revisá el bucket site-media y la tabla cms_documents.',
+        `No se pudo guardar el portfolio. ${formatCmsError(error)}`,
       )
     } finally {
       setSaving(false)

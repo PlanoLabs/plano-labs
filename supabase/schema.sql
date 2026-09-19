@@ -2,6 +2,9 @@
 -- Después, en Vercel, configurá:
 --   VITE_SUPABASE_URL
 --   VITE_SUPABASE_PUBLISHABLE_KEY  (o VITE_SUPABASE_ANON_KEY)
+--
+-- Si el bucket no aparece, crealo a mano:
+-- Storage → New bucket → id: site-media → Public bucket
 
 create table if not exists public.cms_documents (
   key text primary key,
@@ -10,6 +13,11 @@ create table if not exists public.cms_documents (
 );
 
 alter table public.cms_documents enable row level security;
+
+grant usage on schema public to anon, authenticated, service_role;
+
+grant select on table public.cms_documents to anon, authenticated, service_role;
+grant insert, update, delete on table public.cms_documents to authenticated, service_role;
 
 drop policy if exists "cms_documents_select_public" on public.cms_documents;
 create policy "cms_documents_select_public"
@@ -40,10 +48,11 @@ for delete
 to authenticated
 using (true);
 
-insert into storage.buckets (id, name, public)
-values ('site-media', 'site-media', true)
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('site-media', 'site-media', true, 10485760)
 on conflict (id) do update
-set public = true;
+set public = true,
+    file_size_limit = excluded.file_size_limit;
 
 drop policy if exists "site_media_public_read" on storage.objects;
 create policy "site_media_public_read"

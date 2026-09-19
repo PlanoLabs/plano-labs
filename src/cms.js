@@ -41,29 +41,53 @@ export async function loadDocument(key) {
   return data?.value ?? null
 }
 
+export function formatCmsError(error) {
+  return (
+    error?.message ||
+    error?.error ||
+    error?.details ||
+    'Error desconocido al hablar con Supabase.'
+  )
+}
+
 export async function saveDocument(key, value) {
-  const { error } = await supabase.from('cms_documents').upsert({
-    key,
-    value,
-    updated_at: new Date().toISOString(),
-  })
+  const { error } = await supabase.from('cms_documents').upsert(
+    {
+      key,
+      value,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'key' },
+  )
 
   if (error) {
-    throw error
+    throw new Error(
+      `No se pudo guardar "${key}": ${formatCmsError(error)}`,
+    )
   }
 }
 
 export async function uploadDataUrl(folder, dataUrl) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) {
+    throw new Error('La sesión expiró. Volvé a iniciar sesión.')
+  }
+
   const blob = dataUrlToBlob(dataUrl)
   const path = `${folder}/${crypto.randomUUID()}.jpg`
 
   const { error } = await supabase.storage.from('site-media').upload(path, blob, {
-    contentType: 'image/jpeg',
+    contentType: blob.type || 'image/jpeg',
     upsert: false,
   })
 
   if (error) {
-    throw error
+    throw new Error(
+      `No se pudo subir la imagen: ${formatCmsError(error)}`,
+    )
   }
 
   const { data } = supabase.storage.from('site-media').getPublicUrl(path)
