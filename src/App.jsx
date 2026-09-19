@@ -98,6 +98,32 @@ const DEFAULT_ABOUT_POINTS = [
   },
 ]
 
+/*
+ * Renderiza un título editable desde el administrador.
+ * El texto SIEMPRE sale de los datos. Para conservar el estilo
+ * visual de la marca, las dos últimas palabras se resaltan
+ * con el acento (<span>), igual que en el diseño original.
+ */
+function renderHighlightedTitle(title) {
+  const text = String(title || '').trim()
+
+  const words = text.split(/\s+/).filter(Boolean)
+
+  if (words.length < 3) {
+    return text
+  }
+
+  const lead = words.slice(0, -2).join(' ')
+  const highlight = words.slice(-2).join(' ')
+
+  return (
+    <>
+      {lead}
+      <span> {highlight}</span>
+    </>
+  )
+}
+
 function loadSiteContent() {
   try {
     const savedSiteContent = localStorage.getItem(
@@ -603,6 +629,7 @@ function DetailModal({
   item,
   type,
   onClose,
+  onEmail,
   contactEmail,
   whatsapp,
 }) {
@@ -1034,9 +1061,15 @@ function DetailModal({
                   justifyContent:
                     'center',
                 }}
-                onClick={
-                  onClose
-                }
+                onClick={(
+                  event,
+                ) => {
+                  event.preventDefault()
+
+                  if (onEmail) {
+                    onEmail()
+                  }
+                }}
               >
                 Contactar por mail
                 <span>↗</span>
@@ -1049,16 +1082,28 @@ function DetailModal({
   )
 }
 
+const CONTACT_GENERIC_ERROR =
+  'No pudimos enviar tu consulta. Probá de nuevo en unos minutos.'
+
 function EmailModal({
-  email,
   onClose,
 }) {
   const [form, setForm] =
     useState({
       name: '',
       clientEmail: '',
+      phone: '',
       message: '',
+      // Campo trampa anti-spam: las personas no lo ven ni lo completan.
+      website: '',
     })
+
+  // idle | sending | success | error
+  const [status, setStatus] =
+    useState('idle')
+
+  const [errorMessage, setErrorMessage] =
+    useState('')
 
   const handleChange = (
     event,
@@ -1074,24 +1119,96 @@ function EmailModal({
     }))
   }
 
-  const handleSubmit = (
+  const handleSubmit = async (
     event,
   ) => {
     event.preventDefault()
 
-    const subject =
-      encodeURIComponent(
-        `Consulta desde PLANO LABS - ${form.name}`,
+    if (status === 'sending') {
+      return
+    }
+
+    setStatus('sending')
+    setErrorMessage('')
+
+    try {
+      const response = await fetch(
+        '/api/contact',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            name: form.name.trim(),
+            email:
+              form.clientEmail.trim(),
+            phone: form.phone.trim(),
+            message:
+              form.message.trim(),
+            website: form.website,
+          }),
+        },
       )
 
-    const body =
-      encodeURIComponent(
-        `Nombre: ${form.name}\nEmail: ${form.clientEmail}\n\nConsulta:\n${form.message}`,
+      let data = {}
+
+      try {
+        data = await response.json()
+      } catch {
+        data = {}
+      }
+
+      if (!response.ok) {
+        setErrorMessage(
+          data.error ||
+            CONTACT_GENERIC_ERROR,
+        )
+
+        setStatus('error')
+
+        return
+      }
+
+      setStatus('success')
+    } catch (error) {
+      console.error(
+        'No se pudo enviar la consulta.',
+        error,
       )
 
-    window.location.href =
-      `mailto:${email}?subject=${subject}&body=${body}`
+      setErrorMessage(
+        CONTACT_GENERIC_ERROR,
+      )
+
+      setStatus('error')
+    }
   }
+
+  const labelStyle = {
+    display: 'grid',
+    gap: '8px',
+  }
+
+  const labelTextStyle = {
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  }
+
+  const fieldStyle = {
+    width: '100%',
+    padding: '14px',
+    border:
+      '1px solid rgba(245,245,242,0.18)',
+    background: '#0B0D10',
+    color: '#F5F5F2',
+    outline: 'none',
+  }
+
+  const isSending =
+    status === 'sending'
 
   return (
     <div
@@ -1159,207 +1276,290 @@ function EmailModal({
           CONTACTO POR MAIL
         </p>
 
-        <h2
-          style={{
-            marginTop:
-              '10px',
-            paddingRight:
-              '45px',
-          }}
-        >
-          Contanos tu idea.
-        </h2>
-
-        <p
-          style={{
-            marginTop:
-              '14px',
-            lineHeight:
-              1.7,
-          }}
-        >
-          Dejanos tus datos y tu
-          consulta. Se abrirá tu
-          aplicación de correo
-          para enviar el mensaje.
-        </p>
-
-        <form
-          onSubmit={
-            handleSubmit
-          }
-          style={{
-            display:
-              'grid',
-            gap: '16px',
-            marginTop:
-              '28px',
-          }}
-        >
-          <label
-            style={{
-              display:
-                'grid',
-              gap: '8px',
-            }}
-          >
-            <span
+        {status === 'success' ? (
+          <>
+            <h2
               style={{
-                fontSize:
-                  '12px',
-                textTransform:
-                  'uppercase',
-                letterSpacing:
-                  '0.08em',
+                marginTop:
+                  '10px',
+                paddingRight:
+                  '45px',
               }}
             >
-              Nombre
-            </span>
+              ¡Gracias!
+            </h2>
 
-            <input
-              name="name"
-              type="text"
-              value={
-                form.name
-              }
-              onChange={
-                handleChange
-              }
-              required
-              placeholder="Tu nombre"
+            <p
+              style={{
+                marginTop:
+                  '14px',
+                lineHeight:
+                  1.7,
+              }}
+            >
+              Recibimos tu consulta.
+              Te vamos a contactar a
+              la brevedad.
+            </p>
+
+            <button
+              type="button"
+              className="contact-button contact-button-primary"
+              onClick={onClose}
               style={{
                 width:
                   '100%',
-                padding:
-                  '14px',
+                justifyContent:
+                  'center',
                 border:
-                  '1px solid rgba(245,245,242,0.18)',
-                background:
-                  '#0B0D10',
-                color:
-                  '#F5F5F2',
-                outline:
                   'none',
-              }}
-            />
-          </label>
-
-          <label
-            style={{
-              display:
-                'grid',
-              gap: '8px',
-            }}
-          >
-            <span
-              style={{
-                fontSize:
-                  '12px',
-                textTransform:
-                  'uppercase',
-                letterSpacing:
-                  '0.08em',
+                cursor:
+                  'pointer',
+                marginTop:
+                  '28px',
               }}
             >
-              Email
-            </span>
-
-            <input
-              name="clientEmail"
-              type="email"
-              value={
-                form.clientEmail
-              }
-              onChange={
-                handleChange
-              }
-              required
-              placeholder="tu@email.com"
+              Cerrar
+            </button>
+          </>
+        ) : (
+          <>
+            <h2
               style={{
-                width:
-                  '100%',
-                padding:
-                  '14px',
-                border:
-                  '1px solid rgba(245,245,242,0.18)',
-                background:
-                  '#0B0D10',
-                color:
-                  '#F5F5F2',
-                outline:
-                  'none',
-              }}
-            />
-          </label>
-
-          <label
-            style={{
-              display:
-                'grid',
-              gap: '8px',
-            }}
-          >
-            <span
-              style={{
-                fontSize:
-                  '12px',
-                textTransform:
-                  'uppercase',
-                letterSpacing:
-                  '0.08em',
+                marginTop:
+                  '10px',
+                paddingRight:
+                  '45px',
               }}
             >
-              Consulta
-            </span>
+              Contanos tu idea.
+            </h2>
 
-            <textarea
-              name="message"
-              value={
-                form.message
-              }
-              onChange={
-                handleChange
-              }
-              required
-              rows="6"
-              placeholder="Contanos qué necesitás..."
+            <p
               style={{
-                width:
-                  '100%',
-                padding:
+                marginTop:
                   '14px',
-                border:
-                  '1px solid rgba(245,245,242,0.18)',
-                background:
-                  '#0B0D10',
-                color:
-                  '#F5F5F2',
-                outline:
-                  'none',
-                resize:
-                  'vertical',
+                lineHeight:
+                  1.7,
               }}
-            />
-          </label>
+            >
+              Dejanos tus datos y tu
+              consulta. Te vamos a
+              responder a la
+              brevedad.
+            </p>
 
-          <button
-            type="submit"
-            className="contact-button contact-button-primary"
-            style={{
-              width:
-                '100%',
-              justifyContent:
-                'center',
-              border:
-                'none',
-              cursor:
-                'pointer',
-            }}
-          >
-            Enviar consulta
-            <span>↗</span>
-          </button>
-        </form>
+            <form
+              onSubmit={
+                handleSubmit
+              }
+              style={{
+                display:
+                  'grid',
+                gap: '16px',
+                marginTop:
+                  '28px',
+              }}
+            >
+              <label
+                style={
+                  labelStyle
+                }
+              >
+                <span
+                  style={
+                    labelTextStyle
+                  }
+                >
+                  Nombre
+                </span>
+
+                <input
+                  name="name"
+                  type="text"
+                  value={
+                    form.name
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  required
+                  maxLength={120}
+                  autoComplete="name"
+                  placeholder="Tu nombre"
+                  style={
+                    fieldStyle
+                  }
+                />
+              </label>
+
+              <label
+                style={
+                  labelStyle
+                }
+              >
+                <span
+                  style={
+                    labelTextStyle
+                  }
+                >
+                  Email
+                </span>
+
+                <input
+                  name="clientEmail"
+                  type="email"
+                  value={
+                    form.clientEmail
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  required
+                  maxLength={160}
+                  autoComplete="email"
+                  placeholder="tu@email.com"
+                  style={
+                    fieldStyle
+                  }
+                />
+              </label>
+
+              <label
+                style={
+                  labelStyle
+                }
+              >
+                <span
+                  style={
+                    labelTextStyle
+                  }
+                >
+                  Número de teléfono
+                </span>
+
+                <input
+                  name="phone"
+                  type="tel"
+                  inputMode="tel"
+                  value={
+                    form.phone
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  required
+                  maxLength={40}
+                  autoComplete="tel"
+                  placeholder="+54 9 260 000 0000"
+                  style={
+                    fieldStyle
+                  }
+                />
+              </label>
+
+              <label
+                style={
+                  labelStyle
+                }
+              >
+                <span
+                  style={
+                    labelTextStyle
+                  }
+                >
+                  Consulta
+                </span>
+
+                <textarea
+                  name="message"
+                  value={
+                    form.message
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  required
+                  rows="6"
+                  maxLength={4000}
+                  placeholder="Contanos qué necesitás..."
+                  style={{
+                    ...fieldStyle,
+                    resize:
+                      'vertical',
+                  }}
+                />
+              </label>
+
+              <input
+                name="website"
+                type="text"
+                value={
+                  form.website
+                }
+                onChange={
+                  handleChange
+                }
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                style={{
+                  position:
+                    'absolute',
+                  left: '-9999px',
+                  width: '1px',
+                  height: '1px',
+                  opacity: 0,
+                }}
+              />
+
+              {status ===
+                'error' && (
+                <p
+                  role="alert"
+                  style={{
+                    margin: 0,
+                    color:
+                      '#ff6b6b',
+                    lineHeight:
+                      1.6,
+                  }}
+                >
+                  {errorMessage}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                className="contact-button contact-button-primary"
+                disabled={
+                  isSending
+                }
+                style={{
+                  width:
+                    '100%',
+                  justifyContent:
+                    'center',
+                  border:
+                    'none',
+                  cursor:
+                    isSending
+                      ? 'wait'
+                      : 'pointer',
+                  opacity:
+                    isSending
+                      ? 0.7
+                      : 1,
+                }}
+              >
+                {isSending
+                  ? 'Enviando...'
+                  : 'Enviar consulta'}
+                <span>↗</span>
+              </button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   )
@@ -1781,8 +1981,11 @@ function PublicSite() {
   const closeEmail = () => {
     setShowEmailModal(false)
 
+    // Si hay una ficha abierta debajo, se mantiene el bloqueo de scroll.
     document.body.style.overflow =
-      ''
+      detailHistoryRef.current
+        ? 'hidden'
+        : ''
   }
 
   return (
@@ -1846,18 +2049,8 @@ function PublicSite() {
         </p>
 
         <h1>
-          {content.home.title.includes(
-            'toman forma.',
-          ) ? (
-            <>
-              Donde las ideas
-              <span>
-                {' '}
-                toman forma.
-              </span>
-            </>
-          ) : (
-            content.home.title
+          {renderHighlightedTitle(
+            content.home.title,
           )}
         </h1>
 
@@ -1884,18 +2077,8 @@ function PublicSite() {
             </p>
 
             <h2>
-              {content.services.title.includes(
-                ' con intención.',
-              ) ? (
-                <>
-                  Soluciones digitales
-                  <span>
-                    {' '}
-                    con intención.
-                  </span>
-                </>
-              ) : (
-                content.services.title
+              {renderHighlightedTitle(
+                content.services.title,
               )}
             </h2>
           </div>
@@ -1971,18 +2154,8 @@ function PublicSite() {
           </p>
 
           <h2>
-            {content.about.title.includes(
-              ' su forma.',
-            ) ? (
-              <>
-                Ideas que encuentran
-                <span>
-                  {' '}
-                  su forma.
-                </span>
-              </>
-            ) : (
-              content.about.title
+            {renderHighlightedTitle(
+              content.about.title,
             )}
           </h2>
         </div>
@@ -2446,6 +2619,10 @@ function PublicSite() {
 
             <a
               href={`mailto:${contactEmail}`}
+              onClick={(event) => {
+                event.preventDefault()
+                openEmail()
+              }}
               style={{
                 color:
                   '#F5F5F2',
@@ -2473,6 +2650,9 @@ function PublicSite() {
           onClose={
             closeDetail
           }
+          onEmail={
+            openEmail
+          }
           contactEmail={
             contactEmail
           }
@@ -2484,9 +2664,6 @@ function PublicSite() {
 
       {showEmailModal && (
         <EmailModal
-          email={
-            contactEmail
-          }
           onClose={
             closeEmail
           }
