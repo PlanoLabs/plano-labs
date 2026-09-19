@@ -8,6 +8,13 @@ import Login from './pages/Login.jsx'
 
 import Admin from './pages/Admin.jsx'
 
+import {
+  CMS_KEYS,
+  loadDocument,
+  mergeSiteContent,
+  readLocalFallback,
+} from './cms'
+
 const DEFAULT_EMAIL = 'plano.labs.ideas@gmail.com'
 
 const DEFAULT_SITE_CONTENT = {
@@ -124,106 +131,88 @@ function renderHighlightedTitle(title) {
   )
 }
 
-function loadSiteContent() {
+async function loadSiteContent() {
   try {
-    const savedSiteContent = localStorage.getItem(
-      'plano-labs-site-content',
+    const savedContent = await loadDocument(
+      CMS_KEYS.SITE_CONTENT,
     )
 
-    if (!savedSiteContent) {
-      return DEFAULT_SITE_CONTENT
-    }
-
-    const parsedContent = JSON.parse(savedSiteContent)
-
-    return {
-      ...DEFAULT_SITE_CONTENT,
-      ...parsedContent,
-
-      home: {
-        ...DEFAULT_SITE_CONTENT.home,
-        ...(parsedContent.home || {}),
-      },
-
-      services: {
-        ...DEFAULT_SITE_CONTENT.services,
-        ...(parsedContent.services || {}),
-      },
-
-      about: {
-        ...DEFAULT_SITE_CONTENT.about,
-        ...(parsedContent.about || {}),
-      },
-
-      contact: {
-        ...DEFAULT_SITE_CONTENT.contact,
-        ...(parsedContent.contact || {}),
-      },
+    if (savedContent) {
+      return mergeSiteContent(
+        DEFAULT_SITE_CONTENT,
+        savedContent,
+      )
     }
   } catch (error) {
     console.error(
       'No se pudo cargar la configuración del sitio.',
       error,
     )
-
-    return DEFAULT_SITE_CONTENT
   }
+
+  return mergeSiteContent(
+    DEFAULT_SITE_CONTENT,
+    readLocalFallback(
+      'plano-labs-site-content',
+      null,
+    ),
+  )
 }
 
-function loadServices() {
+async function loadServices() {
   try {
-    const savedServices = localStorage.getItem(
-      'plano-labs-services',
+    const savedServices = await loadDocument(
+      CMS_KEYS.SERVICES,
     )
 
-    if (!savedServices) {
-      return DEFAULT_SERVICES
+    if (Array.isArray(savedServices)) {
+      return savedServices
     }
-
-    const parsedServices = JSON.parse(savedServices)
-
-    if (!Array.isArray(parsedServices)) {
-      return DEFAULT_SERVICES
-    }
-
-    return parsedServices
   } catch (error) {
     console.error(
       'No se pudieron cargar los servicios.',
       error,
     )
-
-    return DEFAULT_SERVICES
   }
+
+  const localServices = readLocalFallback(
+    'plano-labs-services',
+    null,
+  )
+
+  if (Array.isArray(localServices)) {
+    return localServices
+  }
+
+  return DEFAULT_SERVICES
 }
 
-function loadAboutPoints() {
+async function loadAboutPoints() {
   try {
-    const savedAboutPoints = localStorage.getItem(
-      'plano-labs-about-points',
+    const savedAboutPoints = await loadDocument(
+      CMS_KEYS.ABOUT_POINTS,
     )
 
-    if (!savedAboutPoints) {
-      return DEFAULT_ABOUT_POINTS
+    if (Array.isArray(savedAboutPoints)) {
+      return savedAboutPoints
     }
-
-    const parsedAboutPoints = JSON.parse(
-      savedAboutPoints,
-    )
-
-    if (!Array.isArray(parsedAboutPoints)) {
-      return DEFAULT_ABOUT_POINTS
-    }
-
-    return parsedAboutPoints
   } catch (error) {
     console.error(
       'No se pudieron cargar los puntos de Nosotros.',
       error,
     )
-
-    return DEFAULT_ABOUT_POINTS
   }
+
+  const localAboutPoints = readLocalFallback(
+    'plano-labs-about-points',
+    null,
+  )
+
+  if (Array.isArray(localAboutPoints)) {
+    return localAboutPoints
+  }
+
+  return DEFAULT_ABOUT_POINTS
 }
 
 function normalizeImages(images) {
@@ -1573,16 +1562,16 @@ function PublicSite() {
     useState([])
 
   const [services, setServices] =
-    useState(loadServices())
+    useState(DEFAULT_SERVICES)
 
   const [aboutPoints, setAboutPoints] =
     useState(
-      loadAboutPoints(),
+      DEFAULT_ABOUT_POINTS,
     )
 
   const [siteContent, setSiteContent] =
     useState(
-      loadSiteContent(),
+      DEFAULT_SITE_CONTENT,
     )
 
   const [selectedItem, setSelectedItem] =
@@ -1598,18 +1587,20 @@ function PublicSite() {
   // correspondiente al detalle actualmente abierto.
   const detailHistoryRef = useRef(false)
 
-  const loadPublicData = () => {
+  const loadPublicData = async () => {
     try {
-      const savedCatalog =
-        localStorage.getItem(
-          'plano-labs-publications',
-        )
+      let publications = await loadDocument(
+        CMS_KEYS.PUBLICATIONS,
+      )
 
-      if (savedCatalog) {
-        const publications =
-          JSON.parse(
-            savedCatalog,
-          )
+      if (!Array.isArray(publications)) {
+        publications = readLocalFallback(
+          'plano-labs-publications',
+          [],
+        )
+      }
+
+      if (Array.isArray(publications) && publications.length) {
 
         const publishedPublications =
           publications
@@ -1685,16 +1676,19 @@ function PublicSite() {
         setCatalog([])
       }
 
-      const savedPortfolio =
-        localStorage.getItem(
-          'plano-labs-portfolio',
-        )
+      let savedPortfolio = await loadDocument(
+        CMS_KEYS.PORTFOLIO,
+      )
 
-      if (savedPortfolio) {
-        const projects =
-          JSON.parse(
-            savedPortfolio,
-          )
+      if (!Array.isArray(savedPortfolio)) {
+        savedPortfolio = readLocalFallback(
+          'plano-labs-portfolio',
+          [],
+        )
+      }
+
+      if (Array.isArray(savedPortfolio) && savedPortfolio.length) {
+        const projects = savedPortfolio
 
         const publishedProjects =
           projects

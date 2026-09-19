@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import {
+  CMS_KEYS,
+  isDataUrl,
+  loadDocument,
+  mergeSiteContent,
+  persistPortfolioImages,
+  persistPublicationImages,
+  saveDocument,
+  uploadDataUrl,
+} from '../cms'
 import './Admin.css'
 
 function Admin() {
@@ -363,20 +373,6 @@ function Admin() {
     }
   })
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        'plano-labs-publications',
-        JSON.stringify(publications),
-      )
-    } catch (error) {
-      console.error(
-        'No se pudieron guardar las publicaciones:',
-        error,
-      )
-    }
-  }, [publications])
-
   const defaultPortfolio = [
     {
       id: 1,
@@ -467,19 +463,66 @@ function Admin() {
     }
   })
 
+  const [saving, setSaving] = useState(false)
+
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        'plano-labs-portfolio',
-        JSON.stringify(portfolio),
-      )
-    } catch (error) {
-      console.error(
-        'No se pudo guardar el portfolio:',
-        error,
-      )
+    if (checkingSession) {
+      return
     }
-  }, [portfolio])
+
+    const hydrate = async () => {
+      try {
+        const [
+          savedContent,
+          savedServices,
+          savedAbout,
+          savedCategories,
+          savedPublications,
+          savedPortfolio,
+        ] = await Promise.all([
+          loadDocument(CMS_KEYS.SITE_CONTENT),
+          loadDocument(CMS_KEYS.SERVICES),
+          loadDocument(CMS_KEYS.ABOUT_POINTS),
+          loadDocument(CMS_KEYS.CATEGORIES),
+          loadDocument(CMS_KEYS.PUBLICATIONS),
+          loadDocument(CMS_KEYS.PORTFOLIO),
+        ])
+
+        if (savedContent) {
+          setSiteContent(
+            mergeSiteContent(defaultSiteContent, savedContent),
+          )
+        }
+
+        if (Array.isArray(savedServices)) {
+          setServices(savedServices)
+        }
+
+        if (Array.isArray(savedAbout)) {
+          setAboutPoints(savedAbout)
+        }
+
+        if (Array.isArray(savedCategories)) {
+          setCategories(savedCategories)
+        }
+
+        if (Array.isArray(savedPublications)) {
+          setPublications(savedPublications)
+        }
+
+        if (Array.isArray(savedPortfolio)) {
+          setPortfolio(savedPortfolio)
+        }
+      } catch (error) {
+        console.error(
+          'No se pudo cargar el contenido desde Supabase:',
+          error,
+        )
+      }
+    }
+
+    hydrate()
+  }, [checkingSession])
 
   const menuItems = [
     {
@@ -558,26 +601,15 @@ function Admin() {
     }))
   }
 
-  const saveSiteContent = () => {
+  const saveSiteContent = async () => {
     try {
-      localStorage.setItem(
-        'plano-labs-site-content',
-        JSON.stringify(siteContent),
-      )
+      setSaving(true)
 
-      localStorage.setItem(
-        'plano-labs-services',
-        JSON.stringify(services),
-      )
+      await saveDocument(CMS_KEYS.SITE_CONTENT, siteContent)
+      await saveDocument(CMS_KEYS.SERVICES, services)
+      await saveDocument(CMS_KEYS.ABOUT_POINTS, aboutPoints)
 
-      localStorage.setItem(
-        'plano-labs-about-points',
-        JSON.stringify(aboutPoints),
-      )
-
-      alert(
-        'Cambios guardados correctamente.',
-      )
+      alert('Cambios guardados en Supabase.')
     } catch (error) {
       console.error(
         'No se pudo guardar la configuración:',
@@ -585,21 +617,20 @@ function Admin() {
       )
 
       alert(
-        'No se pudieron guardar los cambios.',
+        'No se pudieron guardar los cambios en Supabase. Revisá la tabla cms_documents y que estés logueado.',
       )
+    } finally {
+      setSaving(false)
     }
   }
 
-  const saveCategories = () => {
+  const saveCategories = async () => {
     try {
-      localStorage.setItem(
-        'plano-labs-categories',
-        JSON.stringify(categories),
-      )
+      setSaving(true)
 
-      alert(
-        'Categorías guardadas correctamente.',
-      )
+      await saveDocument(CMS_KEYS.CATEGORIES, categories)
+
+      alert('Categorías guardadas en Supabase.')
     } catch (error) {
       console.error(
         'No se pudieron guardar las categorías:',
@@ -607,8 +638,10 @@ function Admin() {
       )
 
       alert(
-        'No se pudieron guardar las categorías.',
+        'No se pudieron guardar las categorías en Supabase.',
       )
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -974,9 +1007,16 @@ function Admin() {
             0.72,
           )
 
+        const url = isDataUrl(optimized)
+          ? await uploadDataUrl(
+              `publications/${id}`,
+              optimized,
+            )
+          : optimized
+
         newImages.push({
           id: `${Date.now()}-${Math.random()}`,
-          url: optimized,
+          url,
         })
       } catch (error) {
         console.error(
@@ -1086,17 +1126,24 @@ function Admin() {
     )
   }
 
-  const savePublications = () => {
+  const savePublications = async () => {
     try {
-      localStorage.setItem(
-        'plano-labs-publications',
-        JSON.stringify(
+      setSaving(true)
+
+      const publicationsToSave =
+        await persistPublicationImages(
           publications,
-        ),
+        )
+
+      setPublications(publicationsToSave)
+
+      await saveDocument(
+        CMS_KEYS.PUBLICATIONS,
+        publicationsToSave,
       )
 
       alert(
-        'Publicaciones guardadas correctamente.',
+        'Publicaciones guardadas en Supabase.',
       )
     } catch (error) {
       console.error(
@@ -1105,8 +1152,10 @@ function Admin() {
       )
 
       alert(
-        'No se pudieron guardar las publicaciones. Alguna imagen puede seguir siendo demasiado pesada.',
+        'No se pudieron guardar las publicaciones en Supabase. Revisá el bucket site-media y la tabla cms_documents.',
       )
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -1235,9 +1284,14 @@ function Admin() {
               0.72,
             )
 
-          newImages.push(
-            optimized,
-          )
+          const url = isDataUrl(optimized)
+            ? await uploadDataUrl(
+                `portfolio/${id}`,
+                optimized,
+              )
+            : optimized
+
+          newImages.push(url)
         } catch (error) {
           console.error(
             `No se pudo procesar ${file.name}:`,
@@ -1416,15 +1470,24 @@ function Admin() {
     )
   }
 
-  const savePortfolio = () => {
+  const savePortfolio = async () => {
     try {
-      localStorage.setItem(
-        'plano-labs-portfolio',
-        JSON.stringify(portfolio),
+      setSaving(true)
+
+      const portfolioToSave =
+        await persistPortfolioImages(
+          portfolio,
+        )
+
+      setPortfolio(portfolioToSave)
+
+      await saveDocument(
+        CMS_KEYS.PORTFOLIO,
+        portfolioToSave,
       )
 
       alert(
-        'Portfolio guardado correctamente.',
+        'Portfolio guardado en Supabase.',
       )
     } catch (error) {
       console.error(
@@ -1433,8 +1496,10 @@ function Admin() {
       )
 
       alert(
-        'No se pudo guardar el portfolio. Alguna imagen puede seguir siendo demasiado pesada.',
+        'No se pudo guardar el portfolio en Supabase. Revisá el bucket site-media y la tabla cms_documents.',
       )
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -2321,14 +2386,17 @@ function Admin() {
 
               <div className="admin-save-bar">
                 <span>
-                  Los cambios están almacenados localmente por ahora.
+                  Los cambios se guardan en Supabase y se ven en el sitio publicado.
                 </span>
 
                 <button
                   className="admin-save-button"
                   onClick={saveSiteContent}
+                  disabled={saving}
                 >
-                  Guardar cambios
+                  {saving
+                    ? 'Guardando...'
+                    : 'Guardar cambios'}
                   <span>↗</span>
                 </button>
               </div>
@@ -2445,14 +2513,17 @@ function Admin() {
 
               <div className="admin-save-bar">
                 <span>
-                  Las categorías se almacenan localmente por ahora.
+                  Las categorías se guardan en Supabase.
                 </span>
 
                 <button
                   className="admin-save-button"
                   onClick={saveCategories}
+                  disabled={saving}
                 >
-                  Guardar categorías
+                  {saving
+                    ? 'Guardando...'
+                    : 'Guardar categorías'}
                   <span>↗</span>
                 </button>
               </div>
@@ -2979,7 +3050,7 @@ function Admin() {
 
               <div className="admin-save-bar">
                 <span>
-                  Las publicaciones se almacenan localmente por ahora.
+                  Las publicaciones e imágenes se guardan en Supabase.
                 </span>
 
                 <button
@@ -2987,8 +3058,11 @@ function Admin() {
                   onClick={
                     savePublications
                   }
+                  disabled={saving}
                 >
-                  Guardar publicaciones
+                  {saving
+                    ? 'Guardando...'
+                    : 'Guardar publicaciones'}
                   <span>↗</span>
                 </button>
               </div>
@@ -3507,7 +3581,7 @@ function Admin() {
               <div className="admin-save-bar">
 
                 <span>
-                  Los proyectos se almacenan localmente por ahora.
+                  Los proyectos e imágenes se guardan en Supabase.
                 </span>
 
                 <button
@@ -3516,8 +3590,11 @@ function Admin() {
                   onClick={
                     savePortfolio
                   }
+                  disabled={saving}
                 >
-                  Guardar portfolio
+                  {saving
+                    ? 'Guardando...'
+                    : 'Guardar portfolio'}
                   <span>↗</span>
                 </button>
 
