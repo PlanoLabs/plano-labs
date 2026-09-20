@@ -66,6 +66,8 @@ function Admin() {
         '¿Tenés una idea, un proyecto o simplemente querés saber qué podemos hacer por vos? Hablemos.',
       whatsapp: '',
       linkedin: '',
+      instagram: '',
+      fiverr: '',
       email: 'plano.labs.ideas@gmail.com',
     },
   }
@@ -2377,6 +2379,30 @@ function Admin() {
                       updateContent(
                         'contact',
                         'linkedin',
+                        value,
+                      ),
+                  )}
+
+                  {renderField(
+                    'Instagram (usuario o link)',
+                    siteContent.contact
+                      .instagram || '',
+                    (value) =>
+                      updateContent(
+                        'contact',
+                        'instagram',
+                        value,
+                      ),
+                  )}
+
+                  {renderField(
+                    'Fiverr (usuario o link)',
+                    siteContent.contact
+                      .fiverr || '',
+                    (value) =>
+                      updateContent(
+                        'contact',
+                        'fiverr',
                         value,
                       ),
                   )}
