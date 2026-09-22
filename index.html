@@ -6,6 +6,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0B0D10" />
 
+    <!--
+      Protección contra la pantalla negra al traducir.
+      Cuando el navegador traduce la página, reorganiza el HTML por su
+      cuenta. Cuando React después intenta actualizar esos mismos
+      elementos, no los encuentra donde los dejó y la app se cae (se ve
+      todo negro por el fondo oscuro). Este script hace que, en vez de
+      caerse, React ignore ese movimiento puntual y siga funcionando.
+    -->
+    <script>
+      (function () {
+        if (typeof Node !== 'function' || !Node.prototype) return
+
+        var originalRemoveChild = Node.prototype.removeChild
+        Node.prototype.removeChild = function (child) {
+          if (child.parentNode !== this) {
+            if (console && console.warn) {
+              console.warn(
+                'Se evitó un error al traducir la página (removeChild).',
+              )
+            }
+            return child
+          }
+          return originalRemoveChild.apply(this, arguments)
+        }
+
+        var originalInsertBefore = Node.prototype.insertBefore
+        Node.prototype.insertBefore = function (newNode, referenceNode) {
+          if (referenceNode && referenceNode.parentNode !== this) {
+            if (console && console.warn) {
+              console.warn(
+                'Se evitó un error al traducir la página (insertBefore).',
+              )
+            }
+            return newNode
+          }
+          return originalInsertBefore.apply(this, arguments)
+        }
+      })()
+    </script>
+
     <!-- Título y descripción que muestra Google -->
     <title>PLANO LABS · Páginas web para emprendimientos</title>
     <meta

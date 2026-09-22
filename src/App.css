@@ -322,12 +322,18 @@
   color: #8B9098;
 }
 
-.service-arrow {
+.service-more {
   position: absolute;
   right: 32px;
   bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-family: 'Montserrat', sans-serif;
-  font-size: 24px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   color: #B8FF3D;
   opacity: 0.65;
   transition:
@@ -335,7 +341,11 @@
     opacity 0.25s ease;
 }
 
-.service-card:hover .service-arrow {
+.service-more span {
+  font-size: 24px;
+}
+
+.service-card:hover .service-more {
   transform: translate(4px, -4px);
   opacity: 1;
 }

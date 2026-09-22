@@ -3,6 +3,7 @@ import './App.css'
 import logo from './assets/logo.png'
 import Login from './pages/Login.jsx'
 import Admin from './pages/Admin.jsx'
+import PreguntasFrecuentes from './pages/PreguntasFrecuentes.jsx'
 import {
   CMS_KEYS,
   loadDocument,
@@ -2253,9 +2254,13 @@ function PublicSite() {
                   </p>
                 </div>
 
-                <div className="service-arrow">
-                  ↗
-                </div>
+                <a
+                  href="#catalogo"
+                  className="service-more"
+                >
+                  Ver más
+                  <span>↗</span>
+                </a>
               </article>
             ),
           )}
@@ -2783,12 +2788,27 @@ function PublicSite() {
             </a>
           </div>
 
-          <a
-            href="/admin"
-            className="admin-access"
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '24px',
+            }}
           >
-            ADMIN
-          </a>
+            <a
+              href="/preguntas-frecuentes"
+              className="admin-access"
+            >
+              PREGUNTAS FRECUENTES
+            </a>
+
+            <a
+              href="/admin"
+              className="admin-access"
+            >
+              ADMIN
+            </a>
+          </div>
         </div>
       </section>
 
@@ -2837,6 +2857,12 @@ function App() {
     path === '/admin/dashboard'
   ) {
     return <Admin />
+  }
+
+  if (
+    path === '/preguntas-frecuentes'
+  ) {
+    return <PreguntasFrecuentes />
   }
 
   return <PublicSite />
