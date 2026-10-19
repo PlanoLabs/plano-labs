@@ -187,6 +187,10 @@ export function mergeSiteContent(defaults, saved) {
       ...defaults.about,
       ...(saved.about || {}),
     },
+    customOffer: {
+      ...defaults.customOffer,
+      ...(saved.customOffer || {}),
+    },
     contact: {
       ...defaults.contact,
       ...(saved.contact || {}),

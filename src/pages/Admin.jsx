@@ -41,6 +41,7 @@ function Admin() {
       description:
         'Diseñamos experiencias digitales que combinan estrategia, tecnología y creatividad.',
       button: 'Conocé nuestros servicios',
+      portrait: '',
     },
 
     services: {
@@ -59,6 +60,14 @@ function Admin() {
         'Desarrollamos soluciones digitales pensadas para marcas, proyectos y personas que buscan transformar una idea en algo real.',
     },
 
+    customOffer: {
+      image: '',
+      title: 'Tu web, a medida',
+      description: '¿Tu proyecto necesita algo diferente? Diseñemos una solución pensada para vos.',
+      features: 'Conversación inicial sobre tu proyecto\nPropuesta personalizada\nDiseño adaptado a tus objetivos',
+      commercialInfo: 'Contanos tu idea y conversemos sobre una propuesta a medida.',
+      price: 'Consultar',
+    },
     contact: {
       eyebrow: '05 / CONTACTO',
       title: 'Hagamos algo realidad.',
@@ -144,6 +153,10 @@ function Admin() {
         about: {
           ...defaultSiteContent.about,
           ...(parsed.about || {}),
+        },
+        customOffer: {
+          ...defaultSiteContent.customOffer,
+          ...(parsed.customOffer || {}),
         },
         contact: {
           ...defaultSiteContent.contact,
@@ -677,6 +690,8 @@ function Admin() {
           id: Date.now(),
           number: nextNumber,
           title: 'NUEVO SERVICIO',
+          icon: 'spark',
+          link: '#catalogo',
           description:
             'Descripción del nuevo servicio.',
         },
@@ -968,6 +983,34 @@ function Admin() {
       reader.readAsDataURL(file)
     })
 
+  const handleCustomOfferImage = async (event) => {
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Usá una imagen JPG, PNG o WebP.')
+      input.value = ''
+      return
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      alert('La imagen no debe superar los 8 MB.')
+      input.value = ''
+      return
+    }
+    try {
+      setSaving(true)
+      const optimized = await optimizeImage(file, 1400, 0.82)
+      const url = await uploadDataUrl('custom-offer', optimized)
+      updateContent('customOffer', 'image', url)
+      alert('Imagen subida. Tocá «Guardar cambios» para publicarla.')
+    } catch (error) {
+      alert('No se pudo subir la imagen: ' + formatCmsError(error))
+    } finally {
+      setSaving(false)
+      input.value = ''
+    }
+  }
+
   const handlePublicationImages = async (
     id,
     event,
@@ -1059,6 +1102,7 @@ function Admin() {
         return {
           ...publication,
           images: updatedImages,
+          generatedCover: publication.coverImage ? publication.generatedCover : 'own',
           coverImage:
             publication.coverImage ||
             newImages[0]?.url ||
@@ -1122,11 +1166,9 @@ function Admin() {
     publicationId,
     imageUrl,
   ) => {
-    updatePublication(
-      publicationId,
-      'coverImage',
-      imageUrl,
-    )
+    setPublications((current) => current.map((publication) => publication.id === publicationId
+      ? { ...publication, coverImage: imageUrl, generatedCover: 'own' }
+      : publication))
   }
 
   const savePublications = async () => {
@@ -2016,6 +2058,47 @@ function Admin() {
                     )}
                   </div>
 
+                  <div className="admin-field-full">
+                    <label className="pl2-portrait-upload">
+                      <span>Fotografía del hero (JPG, PNG o WebP)</span>
+                      <input type="file" accept="image/jpeg,image/png,image/webp"
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0]
+                          if (!file) return
+                          if (file.size > 8 * 1024 * 1024) {
+                            alert('La imagen no debe superar los 8 MB.')
+                            return
+                          }
+                          try {
+                            setSaving(true)
+                            const reader = new FileReader()
+                            const dataUrl = await new Promise((resolve, reject) => {
+                              reader.onload = () => resolve(reader.result)
+                              reader.onerror = () => reject(new Error('No se pudo leer la imagen'))
+                              reader.readAsDataURL(file)
+                            })
+                            const url = await uploadDataUrl('home/portrait', dataUrl)
+                            updateContent('home', 'portrait', url)
+                            alert('Imagen subida. Guardá los cambios de Inicio para publicarla.')
+                          } catch (error) {
+                            alert(`Error al subir la imagen: ${formatCmsError(error)}`)
+                          } finally {
+                            setSaving(false)
+                            event.target.value = ''
+                          }
+                        }}
+                      />
+                      {siteContent.home.portrait && (
+                        <img src={siteContent.home.portrait} alt="Vista previa de la fotografía" />
+                      )}
+                    </label>
+                    {siteContent.home.portrait && (
+                      <button type="button" onClick={() => updateContent('home', 'portrait', '')}>
+                        Quitar fotografía
+                      </button>
+                    )}
+                  </div>
+
                   {renderField(
                     'Texto del botón',
                     siteContent.home.button,
@@ -2126,8 +2209,8 @@ function Admin() {
                           )}
 
                           {renderField(
-                            'Descripción',
-                            service.description,
+                            'Texto breve',
+                            service.description || '',
                             (value) =>
                               updateService(
                                 service.id,
@@ -2137,6 +2220,24 @@ function Admin() {
                             true,
                           )}
 
+                          <label className="admin-field">
+                            <span>Ícono</span>
+                            <select value={service.icon || 'auto'} onChange={(event) => updateService(service.id, 'icon', event.target.value === 'auto' ? '' : event.target.value)}>
+                              <option value="auto">Automático según el título</option>
+                              <option value="web">Web</option>
+                              <option value="ai">Inteligencia artificial</option>
+                              <option value="video">Video</option>
+                              <option value="design">Diseño</option>
+                              <option value="strategy">Estrategia</option>
+                              <option value="spark">Destello</option>
+                            </select>
+                          </label>
+                          {renderField(
+                            'Enlace de destino',
+                            service.link || '',
+                            (value) => updateService(service.id, 'link', value),
+                          )}
+                          <small className="admin-service-help">Usá #catalogo, una ruta como /servicios o un enlace https://. Si lo dejás vacío, se usará #catalogo.</small>
                         </div>
 
                         <button
@@ -2411,6 +2512,26 @@ function Admin() {
 
               </section>
 
+              <section className="admin-editor-card">
+                <div className="admin-editor-header"><div><span>CATÁLOGO / PROPUESTA A MEDIDA</span><h2>Banner y ficha: web a medida</h2></div></div>
+                <p className="admin-service-help">Esta propuesta aparece como banner debajo del catálogo y abre una ficha de producto con opciones de consulta.</p>
+                <div className="admin-form-grid">
+                  <div className="admin-custom-image admin-field-full">
+                    <label className="admin-field">
+                      <span>Imagen de la propuesta a medida</span>
+                      <input type="file" accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={handleCustomOfferImage} />
+                    </label>
+                    <p>JPG, PNG o WebP, hasta 8 MB. Esta imagen aparece en el banner y en su ficha. Después de subirla, tocá «Guardar cambios».</p>
+                    <img src={siteContent.customOffer.image || '/plano-labs/web-a-medida.png'} alt="Vista previa de la imagen de la propuesta a medida" />
+                    {siteContent.customOffer.image && <button type="button" className="admin-custom-reset" disabled={saving} onClick={() => updateContent('customOffer', 'image', '')}>Volver a la imagen original</button>}
+                  </div>
+                  {renderField('Título de la propuesta', siteContent.customOffer.title || '', (value) => updateContent('customOffer', 'title', value))}
+                  {renderField('Precio o leyenda', siteContent.customOffer.price || '', (value) => updateContent('customOffer', 'price', value))}
+                  <div className="admin-field-full">{renderField('Descripción de la propuesta', siteContent.customOffer.description || '', (value) => updateContent('customOffer', 'description', value), true)}</div>
+                  <div className="admin-field-full">{renderField('Características (una por línea)', siteContent.customOffer.features || '', (value) => updateContent('customOffer', 'features', value), true)}</div>
+                  <div className="admin-field-full">{renderField('Información comercial', siteContent.customOffer.commercialInfo || '', (value) => updateContent('customOffer', 'commercialInfo', value), true)}</div>
+                </div>
+              </section>
               <div className="admin-save-bar">
                 <span>
                   Los cambios se guardan en Supabase y se ven en el sitio publicado.
@@ -2751,6 +2872,16 @@ function Admin() {
                                 ),
                             )}
 
+                            <label className="admin-field admin-field-full">
+                              <span>Portada en el catálogo</span>
+                              <select value={publication.generatedCover || 'auto'} onChange={(event) => updatePublication(publication.id, 'generatedCover', event.target.value)}>
+                                <option value="auto">Automática para las tres webs</option>
+                                <option value="landing">Landing page</option>
+                                <option value="emprendedor">Web emprendedor</option>
+                                <option value="editable">Web editable</option>
+                                <option value="own">Mi imagen elegida</option>
+                              </select>
+                            </label>
                             <div className="admin-field-full">
 
                               <label className="admin-field">

@@ -20,6 +20,7 @@ const DEFAULT_SITE_CONTENT = {
     description:
       'Diseñamos experiencias digitales que combinan estrategia, tecnología y creatividad.',
     button: 'Conocé nuestros servicios',
+    portrait: '',
   },
   services: {
     eyebrow: '01 / SERVICIOS',
@@ -34,6 +35,13 @@ const DEFAULT_SITE_CONTENT = {
       'PLANO LABS es un espacio de creación digital donde las ideas, la tecnología y la estrategia se encuentran.',
     description:
       'Desarrollamos soluciones digitales pensadas para marcas, proyectos y personas que buscan transformar una idea en algo real.',
+  },
+  customOffer: {
+    title: 'Tu web, a medida',
+    description: '¿Tu proyecto necesita algo diferente? Diseñemos una solución pensada para vos.',
+    features: 'Conversación inicial sobre tu proyecto\nPropuesta personalizada\nDiseño adaptado a tus objetivos',
+    commercialInfo: 'Contanos tu idea y conversemos sobre una propuesta a medida.',
+    price: 'Consultar',
   },
   contact: {
     eyebrow: '05 / CONTACTO',
@@ -95,6 +103,72 @@ const DEFAULT_ABOUT_POINTS = [
       'Buscamos que cada solución tenga un propósito.',
   },
 ]
+
+// Los servicios antiguos siguen usando su descripción y destino original.
+function catalogCover(publication) {
+  const covers = { landing: '/plano-labs/landing-page.png', emprendedor: '/plano-labs/web-emprendedor.png', editable: '/plano-labs/web-editable.png' }
+  const choice = publication.generatedCover || 'auto'
+  if (choice === 'own') return publication.coverImage || publication.images?.[0]?.url || ''
+  if (covers[choice]) return covers[choice]
+  const title = String(publication.title || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  if (/landing/.test(title)) return covers.landing
+  if (/emprendedor/.test(title)) return covers.emprendedor
+  if (/web editable/.test(title)) return covers.editable
+  return publication.coverImage || publication.images?.[0]?.url || ''
+}
+
+function serviceIconName(service) {
+  if (service.icon) return service.icon
+  const title = (service.title || '').toLowerCase()
+  if (/web|sitio|página|pagina/.test(title)) return 'web'
+  if (/\bia\b|inteligencia|automatiz/.test(title)) return 'ai'
+  if (/video|vídeo|audiovisual/.test(title)) return 'video'
+  return 'spark'
+}
+
+function serviceDestination(value) {
+  const link = typeof value === 'string' ? value.trim() : ''
+  if (/^(?:https?:\/\/|mailto:|tel:)/i.test(link)) return link
+  if (/^(?:#|\/(?![\/\\])|\.\.?\/)/.test(link) && !/[\\\u0000-\u001f]/.test(link)) return link
+  return '#catalogo'
+}
+
+function ServiceIcon({ name }) {
+  const paths = {
+    web: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M7 6.5h.01M10 6.5h.01" /></>,
+    ai: <><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1" /><rect x="8" y="8" width="8" height="8" rx="2" /></>,
+    video: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m10 9 5 3-5 3z" /></>,
+    design: <><path d="m12 3 9 9-9 9-9-9 9-9zM8 12h8M12 8v8" /></>,
+    strategy: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><path d="M12 12 20 4m-3 0h3v3" /></>,
+    spark: <path d="M12 3c.8 5 3 7.2 8 8-5 .8-7.2 3-8 8-.8-5-3-7.2-8-8 5-.8 7.2-3 8-8z" />,
+  }
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] || paths.spark}</svg>
+}
+
+function AboutPoints({ points }) {
+  const container = useRef(null)
+  useEffect(() => {
+    const root = container.current
+    if (!root || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const cards = [...root.querySelectorAll('.about-line')]
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible')
+          observer.unobserve(entry.target)
+        }
+      })
+    }, { threshold: 0.12 })
+    cards.forEach((card) => { card.classList.add('reveal-ready'); observer.observe(card) })
+    return () => observer.disconnect()
+  }, [points])
+  return <div className="about-side" ref={container}>
+    {points.map((point, index) => <div className="about-line" key={point.id || index} style={{ '--reveal-delay': index * 100 + 'ms' }}>
+      <span>{point.number || String(index + 1).padStart(2, '0')}</span>
+      <strong>{point.title}</strong><p>{point.description}</p>
+    </div>)}
+  </div>
+}
 
 function renderHighlightedTitle(title) {
   const text = String(title || '').trim()
@@ -1657,6 +1731,26 @@ function EmailModal({
   )
 }
 
+function PrivateAccessDialog({ onClose }) {
+  const dialogRef = useRef(null)
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog.open) dialog.showModal()
+  }, [])
+
+  return (
+    <dialog ref={dialogRef} className="private-access-dialog" aria-labelledby="private-access-title" onClose={onClose} onClick={(event) => { if (event.target === event.currentTarget) dialogRef.current.close() }}>
+      <div className="private-access-content">
+        <button type="button" className="private-access-close" aria-label="Cerrar" onClick={() => dialogRef.current.close()}>×</button>
+        <p className="section-label">PLANO LABS</p>
+        <h2 id="private-access-title">Acceso privado</h2>
+        <p>Ingresá para gestionar el contenido del sitio.</p>
+        <a className="private-access-link" href="/admin">Ingresar <span aria-hidden="true">↗</span></a>
+      </div>
+    </dialog>
+  )
+}
+
 function PublicSite() {
   const [catalog, setCatalog] =
     useState([])
@@ -1685,6 +1779,20 @@ function PublicSite() {
 
   const [showEmailModal, setShowEmailModal] =
     useState(false)
+
+  const [showPrivateAccess, setShowPrivateAccess] = useState(false)
+  const privateAccessClicks = useRef([])
+  const activatePrivateAccess = () => {
+    const now = Date.now()
+    const recent = privateAccessClicks.current.filter((time) => now - time < 1800)
+    recent.push(now)
+    if (recent.length >= 3) {
+      privateAccessClicks.current = []
+      setShowPrivateAccess(true)
+    } else {
+      privateAccessClicks.current = recent
+    }
+  }
 
   const detailHistoryRef = useRef(false)
 
@@ -1742,11 +1850,7 @@ function PublicSite() {
                           ]
                         : []),
                   ),
-                coverImage:
-                  publication.coverImage ||
-                  publication.images?.[0]
-                    ?.url ||
-                  '',
+                coverImage: catalogCover(publication),
               }),
             )
             .sort(
@@ -2009,6 +2113,17 @@ function PublicSite() {
   const content =
     siteContent || DEFAULT_SITE_CONTENT
 
+  const customOfferImage = content.customOffer?.image || '/plano-labs/web-a-medida.png'
+  const customOffer = {
+    ...DEFAULT_SITE_CONTENT.customOffer,
+    ...(content.customOffer || {}),
+    id: 'web-a-medida',
+    category: 'SOLUCIÓN A MEDIDA',
+    type: 'Servicio',
+    coverImage: customOfferImage,
+    images: [{ id: 'custom-cover', url: customOfferImage }],
+  }
+
   const whatsappNumber =
     content.contact?.whatsapp ||
     ''
@@ -2156,6 +2271,7 @@ function PublicSite() {
           <a href="#contacto">
             Contacto
           </a>
+          <a href="/preguntas-frecuentes">Preguntas frecuentes</a>
         </nav>
       </header>
 
@@ -2163,26 +2279,21 @@ function PublicSite() {
         id="inicio"
         className="hero"
       >
-        <p className="eyebrow">
-          {content.home.eyebrow}
-        </p>
-
-        <h1>
-          {renderHighlightedTitle(
-            content.home.title,
-          )}
-        </h1>
-
-        <p className="hero-description">
-          {content.home.description}
-        </p>
-
-        <a
-          href="#servicios"
-          className="hero-button"
-        >
-          {content.home.button}
-        </a>
+        <div className="pl2-hero-layout">
+          <div className="pl2-hero-portrait" aria-hidden="true">
+            {content.home.portrait ? (
+              <img src={content.home.portrait} alt="" loading="eager" />
+            ) : (
+              <div className="pl2-hero-placeholder" />
+            )}
+          </div>
+          <div className="pl2-hero-copy">
+            <p className="eyebrow">{content.home.eyebrow}</p>
+            <h1>{renderHighlightedTitle(content.home.title)}</h1>
+            <p className="hero-description">{content.home.description}</p>
+            <a href="#servicios" className="hero-button">{content.home.button}</a>
+          </div>
+        </div>
       </section>
 
       <section
@@ -2211,59 +2322,21 @@ function PublicSite() {
         </div>
 
         <div className="services-grid">
-          {services.map(
-            (
-              service,
-              index,
-            ) => (
-              <article
-                className="service-card"
-                key={
-                  service.id ||
-                  index
-                }
-              >
-                <div className="service-top">
-                  <span>
-                    {service.number ||
-                      String(
-                        index + 1,
-                      ).padStart(
-                        2,
-                        '0',
-                      )}
-                  </span>
-
-                  <div className="service-mark">
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
-
-                <div className="service-content">
-                  <h3>
-                    {
-                      service.title
-                    }
-                  </h3>
-
-                  <p>
-                    {
-                      service.description
-                    }
-                  </p>
-                </div>
-
-                <a
-                  href="#catalogo"
-                  className="service-more"
-                >
-                  Ver más
-                  <span>↗</span>
-                </a>
-              </article>
-            ),
-          )}
+          {services.map((service, index) => (
+            <article className="service-card" key={service.id || index}>
+              <div className="service-top">
+                <div className="service-icon"><ServiceIcon name={serviceIconName(service)} /></div>
+                <span>{service.number || String(index + 1).padStart(2, '0')}</span>
+              </div>
+              <div className="service-content">
+                <h3>{service.title}</h3>
+                <p>{service.description}</p>
+              </div>
+              <a href={serviceDestination(service.link)} className="service-more">
+                Ver más <span aria-hidden="true">↗</span>
+              </a>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -2297,44 +2370,7 @@ function PublicSite() {
             </p>
           </div>
 
-          <div className="about-side">
-            {aboutPoints.map(
-              (
-                point,
-                index,
-              ) => (
-                <div
-                  className="about-line"
-                  key={
-                    point.id ||
-                    index
-                  }
-                >
-                  <span>
-                    {point.number ||
-                      String(
-                        index + 1,
-                      ).padStart(
-                        2,
-                        '0',
-                      )}
-                  </span>
-
-                  <strong>
-                    {
-                      point.title
-                    }
-                  </strong>
-
-                  <p>
-                    {
-                      point.description
-                    }
-                  </p>
-                </div>
-              ),
-            )}
-          </div>
+          <AboutPoints points={aboutPoints} />
         </div>
       </section>
 
@@ -2639,6 +2675,15 @@ function PublicSite() {
             )}
           </div>
         )}
+        <button type="button" className="custom-offer" onClick={() => openDetail(customOffer, 'catalog')}>
+          <span className="custom-offer-art" aria-hidden="true"><img src={customOfferImage} alt="" /></span>
+          <span className="custom-offer-copy">
+            <span className="custom-offer-label">UNA SOLUCIÓN PARA TU PROYECTO</span>
+            <strong>{customOffer.title}</strong>
+            <span>{customOffer.description}</span>
+          </span>
+          <span className="custom-offer-cta">Descubrí tu propuesta <span aria-hidden="true">↗</span></span>
+        </button>
       </section>
 
       <section
@@ -2750,6 +2795,16 @@ function PublicSite() {
           </div>
         </div>
 
+        <a className="faq-banner" href="/preguntas-frecuentes">
+          <span className="faq-banner-icon" aria-hidden="true">?</span>
+          <span className="faq-banner-copy">
+            <span>ESTAMOS PARA AYUDARTE</span>
+            <strong>¿Te quedaron dudas?</strong>
+            <span>Encontrá respuestas sobre nuestras webs y cómo trabajamos.</span>
+          </span>
+          <span className="faq-banner-link">Ver preguntas frecuentes <span aria-hidden="true">↗</span></span>
+        </a>
+
         <div className="contact-footer">
           <div
             style={{
@@ -2760,9 +2815,7 @@ function PublicSite() {
               gap: '8px',
             }}
           >
-            <span>
-              PLANO LABS
-            </span>
+            <button type="button" className="footer-brand" onClick={activatePrivateAccess}>PLANO LABS</button>
 
             <span>
               DONDE LAS IDEAS
@@ -2788,29 +2841,11 @@ function PublicSite() {
             </a>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '24px',
-            }}
-          >
-            <a
-              href="/preguntas-frecuentes"
-              className="admin-access"
-            >
-              PREGUNTAS FRECUENTES
-            </a>
 
-            <a
-              href="/admin"
-              className="admin-access"
-            >
-              ADMIN
-            </a>
-          </div>
         </div>
       </section>
+
+      {showPrivateAccess && <PrivateAccessDialog onClose={() => setShowPrivateAccess(false)} />}
 
       {selectedItem && (
         <DetailModal
