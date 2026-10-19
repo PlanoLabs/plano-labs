@@ -1751,7 +1751,52 @@ function PrivateAccessDialog({ onClose }) {
   )
 }
 
+function MobileCarousel({ items, className, children, interval = 4200 }) {
+  const trackRef = useRef(null)
+  const [active, setActive] = useState(0)
+  const [mobile, setMobile] = useState(false)
+  const [paused, setPaused] = useState(false)
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 650px)')
+    const update = () => setMobile(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    if (!mobile || paused || items.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const timer = window.setInterval(() => {
+      if (document.hidden || !trackRef.current) return
+      const next = (Math.round(trackRef.current.scrollLeft / trackRef.current.clientWidth) + 1) % items.length
+      trackRef.current.scrollTo({ left: next * trackRef.current.clientWidth, behavior: 'smooth' })
+    }, interval)
+    return () => window.clearInterval(timer)
+  }, [mobile, paused, items.length, interval])
+
+  const moveTo = (index) => {
+    trackRef.current?.scrollTo({ left: index * trackRef.current.clientWidth, behavior: 'smooth' })
+    setActive(index)
+  }
+
+  return <div className="mobile-carousel" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onTouchStart={() => setPaused(true)} onTouchEnd={() => setPaused(false)} onFocusCapture={() => setPaused(true)} onBlurCapture={() => setPaused(false)}>
+    <div className={className} ref={trackRef} onScroll={(event) => {
+      if (!mobile || !event.currentTarget.clientWidth) return
+      setActive(Math.min(items.length - 1, Math.round(event.currentTarget.scrollLeft / event.currentTarget.clientWidth)))
+    }}>
+      {children}
+    </div>
+    {mobile && items.length > 1 && <div className="mobile-carousel-controls" aria-label="Controles del carrusel">
+      <button type="button" aria-label="Anterior" onClick={() => moveTo((active - 1 + items.length) % items.length)}>‹</button>
+      <span className="mobile-carousel-count">{active + 1} / {items.length}</span>
+      <button type="button" aria-label="Siguiente" onClick={() => moveTo((active + 1) % items.length)}>›</button>
+    </div>}
+  </div>
+}
+
 function PublicSite() {
+  const [menuOpen, setMenuOpen] = useState(false)
   const [catalog, setCatalog] =
     useState([])
 
@@ -2247,7 +2292,10 @@ function PublicSite() {
           />
         </a>
 
-        <nav>
+        <button type="button" className="mobile-menu-toggle" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="main-navigation" onClick={() => setMenuOpen(!menuOpen)}>
+          <span aria-hidden="true">•••</span>
+        </button>
+        <nav id="main-navigation" className={menuOpen ? 'menu-open' : ''} onClick={(event) => { if (event.target.closest('a')) setMenuOpen(false) }}>
           <a href="#inicio">
             Inicio
           </a>
@@ -2321,7 +2369,7 @@ function PublicSite() {
           </p>
         </div>
 
-        <div className="services-grid">
+        <MobileCarousel items={services} className="services-grid">
           {services.map((service, index) => (
             <article className="service-card" key={service.id || index}>
               <div className="service-top">
@@ -2337,7 +2385,7 @@ function PublicSite() {
               </a>
             </article>
           ))}
-        </div>
+        </MobileCarousel>
       </section>
 
       <section
@@ -2419,7 +2467,7 @@ function PublicSite() {
             </p>
           </div>
         ) : (
-          <div className="portfolio-grid">
+          <MobileCarousel items={portfolio} className="portfolio-grid">
             {portfolio.map(
               (project) => (
                 <article
@@ -2511,7 +2559,7 @@ function PublicSite() {
                 </article>
               ),
             )}
-          </div>
+          </MobileCarousel>
         )}
       </section>
 
@@ -2840,8 +2888,10 @@ function PublicSite() {
               {contactEmail}
             </a>
           </div>
-
-
+          <a href="#inicio" className="footer-back-to-top" aria-label="Volver al inicio de PLANO LABS">
+            <img src={logo} alt="" />
+            <span>↑ VOLVER AL INICIO</span>
+          </a>
         </div>
       </section>
 
