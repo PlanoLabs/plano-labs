@@ -77,7 +77,7 @@ function PreguntasFrecuentes() {
     <main className="faq-page">
       <div className="faq-inner">
         <a href="/" className="faq-back">
-          ← Volver al inicio
+          ← Volver al sitio
         </a>
 
         <p className="section-label">PREGUNTAS FRECUENTES</p>

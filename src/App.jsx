@@ -11,6 +11,20 @@ import {
   readLocalFallback,
 } from './cms'
 
+// Guardamos la posición antes de abrir las FAQ y la restauramos al regresar.
+const FAQ_RETURN_POSITION_KEY = 'plano-labs:faq-return-position'
+
+function rememberFaqPosition() {
+  try {
+    window.sessionStorage.setItem(
+      FAQ_RETURN_POSITION_KEY,
+      JSON.stringify({ y: window.scrollY, savedAt: Date.now() }),
+    )
+  } catch {
+    // La navegación a preguntas frecuentes funciona aunque el navegador bloquee el almacenamiento.
+  }
+}
+
 const DEFAULT_EMAIL = 'plano.labs.ideas@gmail.com'
 
 const DEFAULT_SITE_CONTENT = {
@@ -45,7 +59,7 @@ const DEFAULT_SITE_CONTENT = {
   },
   contact: {
     eyebrow: '05 / CONTACTO',
-    title: 'Hagamos algo realidad.',
+    title: 'Hagamos realidad tu idea.',
     description:
       '¿Tenés una idea, un proyecto o simplemente querés saber qué podemos hacer por vos? Hablemos.',
     whatsapp: '',
@@ -102,6 +116,118 @@ const DEFAULT_ABOUT_POINTS = [
     description:
       'Buscamos que cada solución tenga un propósito.',
   },
+]
+
+const UNIVERSE_NODES = [
+  { number: '01', title: 'Creatividad', description: 'Ideas con identidad para comunicar lo que hace única a cada marca.', image: '/universe/creatividad.svg' },
+  { number: '02', title: 'Diseño', description: 'Sistemas visuales claros, sensibles y pensados para ser recordados.', image: '/universe/diseno.svg' },
+  { number: '03', title: 'Desarrollo', description: 'Experiencias digitales funcionales, rápidas y preparadas para crecer.', image: '/universe/desarrollo.svg' },
+  { number: '04', title: 'Estrategia', description: 'Decisiones con dirección para convertir una idea en un proyecto posible.', image: '/universe/estrategia.svg' },
+  { number: '05', title: 'Detrás de PLANO LABS', description: 'Soy Marcelo Alfaro, la persona detrás de PLANO LABS. Me apasiona transformar ideas en proyectos digitales reales, combinando creatividad, diseño y tecnología. Me involucro personalmente en cada proyecto, porque creo que una buena página web no solo tiene que verse bien: tiene que ayudar a que tu negocio crezca.', image: '/universe/creador.webp' },
+]
+
+
+function UniverseSection() {
+  const sectionRef = useRef(null)
+  const [active, setActive] = useState(0)
+  const [discovered, setDiscovered] = useState(0)
+  const activeRef = useRef(0)
+  const scrollStepRef = useRef(0)
+
+  useEffect(() => {
+    let frame = 0
+    const update = () => {
+      frame = 0
+      const section = sectionRef.current
+      if (!section) return
+      const travel = Math.max(1, section.offsetHeight - window.innerHeight)
+      const progress = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / travel))
+      const step = Math.min(UNIVERSE_NODES.length - 1, Math.floor(progress * UNIVERSE_NODES.length))
+      if (step !== scrollStepRef.current) {
+        scrollStepRef.current = step
+        activeRef.current = step
+        setActive(step)
+      }
+      setDiscovered(previous => Math.max(previous, step))
+    }
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(update)
+    }
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
+    update()
+    return () => {
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+      if (frame) window.cancelAnimationFrame(frame)
+    }
+  }, [])
+
+  const selectNode = (index) => {
+    activeRef.current = index
+    setActive(index)
+    setDiscovered(previous => Math.max(previous, index))
+  }
+
+  return (
+    <section id="universo" className="universe universe-story" ref={sectionRef}>
+      <div className="universe-sticky">
+        <div className="universe-header">
+          <p className="section-label">01 / UNIVERSO PLANO LABS</p>
+          <h2>Todo lo que una idea necesita para <span>tomar forma.</span></h2>
+          <p>Un ecosistema de disciplinas que se conectan para hacer que cada proyecto avance con coherencia.</p>
+        </div>
+        <div className="universe-experience">
+          <div className="universe-orbit" aria-label="Seleccioná una disciplina del Universo PLANO LABS">
+            <svg className="universe-connections" viewBox="0 0 600 520" preserveAspectRatio="none" aria-hidden="true">
+              {[[300,55],[530,170],[450,455],[150,455],[70,170]].map(([x,y],index) => (
+                <line key={index} x1="300" y1="260" x2={x} y2={y}
+                  className={index <= discovered ? 'is-lit' : ''}
+                  style={{ transitionDelay: `${index * 65}ms` }} />
+              ))}
+            </svg>
+            <div className="universe-orbit-ring" aria-hidden="true" />
+            <div className="universe-core">
+              <img src={logo} alt="PLANO LABS" />
+            </div>
+            {UNIVERSE_NODES.map((node,index) => (
+              <button
+                key={node.number}
+                type="button"
+                className={`universe-node universe-node-${index + 1}${index === active ? ' is-active' : ''}${index <= discovered ? ' is-discovered' : ''}`}
+                aria-pressed={index === active}
+                onClick={() => selectNode(index)}
+              >
+                <span className="universe-node-number">{node.number}</span>
+                <span className="universe-node-name">{node.title}</span>
+              </button>
+            ))}
+          </div>
+          <div className="universe-feature" aria-live="polite">
+            <div className="universe-feature-image">
+              {UNIVERSE_NODES.map((node,index) => (
+                <img key={node.number} src={node.image} alt={node.title}
+                  className={index === active ? 'is-active' : ''} loading="lazy" />
+              ))}
+              <span className="universe-feature-count">{UNIVERSE_NODES[active].number} / 05</span>
+            </div>
+            <div className="universe-feature-copy" key={active}>
+              <span className="universe-feature-label">EL UNIVERSO EN MOVIMIENTO</span>
+              <h3>{UNIVERSE_NODES[active].title}</h3>
+              <p>{UNIVERSE_NODES[active].description}</p>
+            </div>
+          </div>
+        </div>
+        <p className="universe-scroll-hint">Deslizá para descubrir nuestro universo <span aria-hidden="true">↓</span></p>
+      </div>
+    </section>
+  )
+}
+
+const DEFAULT_PORTFOLIO = [
+  { id: 'legado-matero', order: 1, title: 'Legado Matero', client: 'Legado Matero', category: 'Identidad visual', shortDescription: 'Proyecto de identidad para Legado Matero.', description: 'Ficha de proyecto disponible para completar desde el administrador.', coverImage: '/portfolio-logos/Legado%20Matero.png', images: [{ id: 'logo', url: '/portfolio-logos/Legado%20Matero.png' }], published: true },
+  { id: 'magia-consciente', order: 2, title: 'Magia Consciente', client: 'Magia Consciente', category: 'Identidad visual', shortDescription: 'Proyecto de identidad para Magia Consciente.', description: 'Ficha de proyecto disponible para completar desde el administrador.', coverImage: '/portfolio-logos/Magia%20Consciente.png', images: [{ id: 'logo', url: '/portfolio-logos/Magia%20Consciente.png' }], published: true },
+  { id: 'san-gabriel', order: 3, title: 'San Gabriel', client: 'San Gabriel Tienda Holística', category: 'Identidad visual', shortDescription: 'Proyecto de identidad para San Gabriel Tienda Holística.', description: 'Ficha de proyecto disponible para completar desde el administrador.', coverImage: '/portfolio-logos/san-gabriel-transparent.png', images: [{ id: 'logo', url: '/portfolio-logos/san-gabriel-transparent.png' }], published: true },
 ]
 
 // Los servicios antiguos siguen usando su descripción y destino original.
@@ -791,6 +917,36 @@ function normalizeSocialLink(value, host, baseUrl) {
   return `${baseUrl}${text.replace(/^[@/]+/, '')}`
 }
 
+/**
+ * Convierte un usuario de Instagram (con o sin @) o su URL completa
+ * en un enlace seguro a un perfil. Los valores vacíos o inválidos
+ * se omiten, sin generar links rotos.
+ */
+function getClientInstagram(value) {
+  const text = String(value || '').trim()
+  if (!text) return null
+
+  let username = text.replace(/^@/, '')
+
+  if (/^(https?:\/\/)?(www\.)?instagram\.com\//i.test(text)) {
+    try {
+      const parsed = new URL(/^https?:\/\//i.test(text) ? text : `https://${text}`)
+      if (!['instagram.com', 'www.instagram.com'].includes(parsed.hostname.toLowerCase())) return null
+      username = parsed.pathname.split('/').filter(Boolean)[0] || ''
+    } catch {
+      return null
+    }
+  }
+
+  if (!/^[a-zA-Z0-9._]{1,30}$/.test(username)) return null
+  if (['p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct'].includes(username.toLowerCase())) return null
+
+  return {
+    label: `@${username}`,
+    url: `https://www.instagram.com/${username}/`,
+  }
+}
+
 function DetailModal({
   item,
   type,
@@ -820,6 +976,10 @@ function DetailModal({
   const isPortfolio =
     type === 'portfolio'
 
+  const clientInstagram = isPortfolio
+    ? getClientInstagram(item.clientInstagram)
+    : null
+
   const cleanWhatsapp = String(
     whatsapp || '',
   ).replace(/\D/g, '')
@@ -832,6 +992,7 @@ function DetailModal({
     <div
       role="dialog"
       aria-modal="true"
+      className={isPortfolio ? "portfolio-detail-backdrop" : undefined}
       onClick={onClose}
       style={{
         position: 'fixed',
@@ -844,6 +1005,7 @@ function DetailModal({
       }}
     >
       <div
+        className={isPortfolio ? "portfolio-detail-panel" : undefined}
         onClick={(event) =>
           event.stopPropagation()
         }
@@ -971,27 +1133,30 @@ function DetailModal({
               </div>
             )}
 
-            {item.client && (
-              <div
-                style={{
-                  marginBottom:
-                    '28px',
-                }}
-              >
-                <p className="section-label">
-                  CLIENTE
-                </p>
+            {(item.client || clientInstagram) && (
+              <div className="portfolio-client-info">
+                <p className="section-label">CLIENTE</p>
 
-                <p
-                  style={{
-                    marginTop:
-                      '8px',
-                    color:
-                      '#F5F5F2',
-                  }}
-                >
-                  {item.client}
-                </p>
+                {item.client && (
+                  <p className="portfolio-client-name">
+                    {item.client}
+                  </p>
+                )}
+
+                {clientInstagram && (
+                  <a
+                    className="portfolio-client-instagram"
+                    href={clientInstagram.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Visitar el Instagram de ${item.client || clientInstagram.label}`}
+                    aria-label={`Abrir Instagram de ${item.client || clientInstagram.label} en otra pestaña`}
+                  >
+                    <ContactIcon name="instagram" size={17} />
+                    <span>{clientInstagram.label}</span>
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                )}
               </div>
             )}
 
@@ -1801,7 +1966,7 @@ function PublicSite() {
     useState([])
 
   const [portfolio, setPortfolio] =
-    useState([])
+    useState(DEFAULT_PORTFOLIO)
 
   const [services, setServices] =
     useState(DEFAULT_SERVICES)
@@ -1838,6 +2003,125 @@ function PublicSite() {
       privateAccessClicks.current = recent
     }
   }
+
+  const logoMarqueeRef = useRef(null)
+  const [publicDataLoaded, setPublicDataLoaded] = useState(false)
+
+  // En pantallas táctiles, el carrusel conserva su avance automático,
+  // pero el usuario puede desplazarlo libremente con el dedo.
+  useEffect(() => {
+    const viewport = logoMarqueeRef.current
+    if (!viewport || portfolio.length < 2) return
+
+    const media = window.matchMedia('(max-width: 900px)')
+    const group = viewport.querySelector('.portfolio-marquee-group')
+    if (!group) return
+
+    let frame = 0
+    let lastFrame = 0
+    let pausedUntil = 0
+    let pointerHeld = false
+    let focused = false
+    let visible = true
+
+    const pause = () => { pausedUntil = performance.now() + 2500 }
+    const onPointerDown = () => { pointerHeld = true }
+    const onPointerUp = () => { pointerHeld = false; pause() }
+    const onFocusIn = () => { focused = true }
+    const onFocusOut = () => { focused = false; pause() }
+    const onWheel = () => { pause() }
+
+    const tick = (now) => {
+      frame = window.requestAnimationFrame(tick)
+      if (!media.matches) return
+
+      const width = group.getBoundingClientRect().width
+      if (!width) return
+
+      // Las tres copias son idénticas: recentrar evita llegar a un extremo.
+      // Nunca interrumpimos el gesto activo del visitante.
+      if (!pointerHeld) {
+        if (viewport.scrollLeft < width * 0.5) viewport.scrollLeft += width
+        if (viewport.scrollLeft >= width * 1.5) viewport.scrollLeft -= width
+      }
+
+      const elapsed = lastFrame ? Math.min(now - lastFrame, 64) : 0
+      lastFrame = now
+      if (!pointerHeld && !focused && visible && now > pausedUntil) {
+        viewport.scrollLeft += (elapsed * width) / 24000
+      }
+    }
+
+    const setMode = () => {
+      window.cancelAnimationFrame(frame)
+      lastFrame = 0
+      if (media.matches) {
+        viewport.scrollLeft = group.getBoundingClientRect().width
+        frame = window.requestAnimationFrame(tick)
+      } else {
+        viewport.scrollLeft = 0
+      }
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting
+      lastFrame = 0
+    })
+    observer.observe(viewport)
+
+    viewport.addEventListener('pointerdown', onPointerDown, { passive: true })
+    viewport.addEventListener('pointerup', onPointerUp, { passive: true })
+    viewport.addEventListener('pointercancel', onPointerUp, { passive: true })
+    viewport.addEventListener('focusin', onFocusIn)
+    viewport.addEventListener('focusout', onFocusOut)
+    viewport.addEventListener('wheel', onWheel, { passive: true })
+    media.addEventListener('change', setMode)
+    setMode()
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer.disconnect()
+      media.removeEventListener('change', setMode)
+      viewport.removeEventListener('pointerdown', onPointerDown)
+      viewport.removeEventListener('pointerup', onPointerUp)
+      viewport.removeEventListener('pointercancel', onPointerUp)
+      viewport.removeEventListener('focusin', onFocusIn)
+      viewport.removeEventListener('focusout', onFocusOut)
+      viewport.removeEventListener('wheel', onWheel)
+    }
+  }, [portfolio])
+
+  // La página de FAQ está en otra ruta. Al volver, recuperar el píxel guardado
+  // (esperando a que el contenido asincrónico termine de ocupar su altura).
+  useEffect(() => {
+    if (!publicDataLoaded) return
+    let saved
+    try {
+      saved = JSON.parse(window.sessionStorage.getItem(FAQ_RETURN_POSITION_KEY) || 'null')
+      window.sessionStorage.removeItem(FAQ_RETURN_POSITION_KEY)
+    } catch {
+      return
+    }
+    if (!saved || !Number.isFinite(saved.y) ||
+        Date.now() - saved.savedAt > 30 * 60 * 1000 ||
+        window.location.hash) return
+
+    let timer
+    let attempts = 0
+    let cancelled = false
+    const restore = () => {
+      if (cancelled) return
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+      if (maxScroll >= saved.y || attempts >= 25) {
+        window.scrollTo({ top: saved.y, left: 0, behavior: 'instant' })
+      } else {
+        attempts += 1
+        timer = window.setTimeout(restore, 120)
+      }
+    }
+    timer = window.setTimeout(restore, 0)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [publicDataLoaded])
 
   const detailHistoryRef = useRef(false)
 
@@ -2041,7 +2325,7 @@ function PublicSite() {
           publishedProjects,
         )
       } else {
-        setPortfolio([])
+        setPortfolio(DEFAULT_PORTFOLIO)
       }
 
       const [
@@ -2085,6 +2369,8 @@ function PublicSite() {
         'No se pudieron cargar los datos públicos.',
         error,
       )
+    } finally {
+      if (requestId === loadRequestRef.current) setPublicDataLoaded(true)
     }
   }
 
@@ -2300,12 +2586,8 @@ function PublicSite() {
             Inicio
           </a>
 
-          <a href="#servicios">
-            Servicios
-          </a>
-
-          <a href="#nosotros">
-            Nosotros
+          <a href="#universo">
+            Universo
           </a>
 
           <a href="#portfolio">
@@ -2319,7 +2601,6 @@ function PublicSite() {
           <a href="#contacto">
             Contacto
           </a>
-          <a href="/preguntas-frecuentes">Preguntas frecuentes</a>
         </nav>
       </header>
 
@@ -2339,227 +2620,56 @@ function PublicSite() {
             <p className="eyebrow">{content.home.eyebrow}</p>
             <h1>{renderHighlightedTitle(content.home.title)}</h1>
             <p className="hero-description">{content.home.description}</p>
-            <a href="#servicios" className="hero-button">{content.home.button}</a>
+            <a href="#universo" className="hero-button">{content.home.button}</a>
           </div>
         </div>
       </section>
 
-      <section
-        id="servicios"
-        className="services"
-      >
-        <div className="services-header">
-          <div>
-            <p className="section-label">
-              {content.services.eyebrow}
-            </p>
+      <UniverseSection />
 
-            <h2>
-              {renderHighlightedTitle(
-                content.services.title,
-              )}
-            </h2>
-          </div>
-
-          <p className="services-intro">
-            {
-              content.services
-                .description
-            }
-          </p>
-        </div>
-
-        <MobileCarousel items={services} className="services-grid">
-          {services.map((service, index) => (
-            <article className="service-card" key={service.id || index}>
-              <div className="service-top">
-                <div className="service-icon"><ServiceIcon name={serviceIconName(service)} /></div>
-                <span>{service.number || String(index + 1).padStart(2, '0')}</span>
-              </div>
-              <div className="service-content">
-                <h3>{service.title}</h3>
-                <p>{service.description}</p>
-              </div>
-              <a href={serviceDestination(service.link)} className="service-more">
-                Ver más <span aria-hidden="true">↗</span>
-              </a>
-            </article>
-          ))}
-        </MobileCarousel>
-      </section>
-
-      <section
-        id="nosotros"
-        className="about"
-      >
-        <div className="about-header">
-          <p className="section-label">
-            {content.about.eyebrow}
-          </p>
-
-          <h2>
-            {renderHighlightedTitle(
-              content.about.title,
-            )}
-          </h2>
-        </div>
-
-        <div className="about-content">
-          <div className="about-main">
-            <p className="about-lead">
-              {content.about.lead}
-            </p>
-
-            <p>
-              {
-                content.about
-                  .description
-              }
-            </p>
-          </div>
-
-          <AboutPoints points={aboutPoints} />
-        </div>
-      </section>
-
-      <section
-        id="portfolio"
-        className="portfolio"
-      >
+      <section id="portfolio" className="portfolio portfolio-showcase">
         <div className="portfolio-header">
           <div>
-            <p className="section-label">
-              03 / PORTFOLIO
-            </p>
-
-            <h2>
-              Proyectos que
-              <span>
-                {' '}
-                toman forma.
-              </span>
-            </h2>
+            <p className="section-label">02 / PORTFOLIO</p>
+            <h2>Proyectos <span>reales.</span></h2>
           </div>
-
-          <p className="portfolio-intro">
-            Una selección de trabajos y
-            experiencias desarrolladas por
-            PLANO LABS.
-          </p>
+          <div className="portfolio-heading-side">
+            <p className="portfolio-intro">Ya confiaron en nosotros.</p>
+            <span className="portfolio-heading-arrow" aria-hidden="true">↓</span>
+          </div>
         </div>
-
-        {portfolio.length ===
-        0 ? (
-          <div
-            style={{
-              padding:
-                '60px 20px',
-              textAlign:
-                'center',
-              border:
-                '1px solid rgba(245,245,242,0.12)',
-            }}
-          >
-            <p>
-              Próximamente
-              encontrarás aquí
-              nuestros proyectos.
-            </p>
-          </div>
+        {portfolio.length === 0 ? (
+          <p className="portfolio-empty">Próximamente encontrarás aquí nuestros proyectos.</p>
         ) : (
-          <MobileCarousel items={portfolio} className="portfolio-grid">
-            {portfolio.map(
-              (project) => (
-                <article
-                  className="project-card"
-                  key={
-                    project.id
-                  }
-                  onClick={() =>
-                    openDetail(
-                      project,
-                      'portfolio',
+          <div className="portfolio-marquee" ref={logoMarqueeRef} aria-label="Marcas que confiaron en PLANO LABS. En celular, deslizá para explorar los proyectos.">
+            <div className="portfolio-marquee-track">
+              {[0, 1, 2].map((repeat) => (
+                <div className="portfolio-marquee-group" key={repeat} aria-hidden={repeat !== 0 ? true : undefined}>
+                  {portfolio.map((project) => {
+                    const name = `${project.title || ''} ${project.client || ''}`.toLowerCase()
+                    const brandLogo = project.logo || project.clientLogo ||
+                      (name.includes('matero') ? '/portfolio-logos/Legado%20Matero.png' :
+                       name.includes('magia') ? '/portfolio-logos/Magia%20Consciente.png' :
+                       name.includes('gabriel') ? '/portfolio-logos/san-gabriel-transparent.png' :
+                       project.coverImage || project.image)
+                    return (
+                      <button
+                        key={`${repeat}-${project.id}`}
+                        type="button"
+                        className="portfolio-floating-logo"
+                        tabIndex={repeat === 0 ? 0 : -1}
+                        onClick={() => openDetail(project, 'portfolio')}
+                        aria-label={`Conocer proyecto ${project.title}`}
+                      >
+                        {brandLogo ? <img src={brandLogo} alt="" loading="lazy" /> : <span>{project.title}</span>}
+                        <span className="portfolio-logo-hint">Conocer proyecto ↗</span>
+                      </button>
                     )
-                  }
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(
-                    event,
-                  ) => {
-                    if (
-                      event.key ===
-                        'Enter' ||
-                      event.key ===
-                        ' '
-                    ) {
-                      openDetail(
-                        project,
-                        'portfolio',
-                      )
-                    }
-                  }}
-                  style={{
-                    cursor:
-                      'pointer',
-                  }}
-                >
-                  <div className="project-image">
-                    <span>
-                      {
-                        project.number
-                      }
-                    </span>
-
-                    {project.coverImage ? (
-                      <img
-                        src={
-                          project.coverImage
-                        }
-                        alt={
-                          project.title
-                        }
-                        style={{
-                          width:
-                            '100%',
-                          height:
-                            '100%',
-                          objectFit:
-                            'cover',
-                          display:
-                            'block',
-                        }}
-                      />
-                    ) : (
-                      <div className="project-placeholder">
-                        <div className="project-shape"></div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="project-info">
-                    <div>
-                      <p className="project-category">
-                        {
-                          project.category
-                        }
-                      </p>
-
-                      <h3>
-                        {
-                          project.title
-                        }
-                      </h3>
-                    </div>
-
-                    <p>
-                      {project.shortDescription ||
-                        project.description}
-                    </p>
-                  </div>
-                </article>
-              ),
-            )}
-          </MobileCarousel>
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </section>
 
@@ -2574,21 +2684,18 @@ function PublicSite() {
             </p>
 
             <h2>
-              Soluciones para
+              Una web a la medida de
               <span>
                 {' '}
-                llevar tu idea más
-                lejos.
+                tu próximo paso.
               </span>
             </h2>
           </div>
 
           <p className="catalog-intro">
-            Conocé nuestros productos y
-            servicios disponibles. Cada
-            propuesta está pensada para
-            resolver una necesidad
-            concreta.
+            Elegí la solución que mejor
+            acompaña el momento de tu
+            proyecto.
           </p>
         </div>
 
@@ -2616,7 +2723,7 @@ function PublicSite() {
             {catalog.map(
               (item) => (
                 <article
-                  className="catalog-card"
+                  className="catalog-cover-card catalog-cinematic-banner"
                   key={item.id}
                   onClick={() =>
                     openDetail(
@@ -2641,16 +2748,11 @@ function PublicSite() {
                       )
                     }
                   }}
-                  style={{
-                    cursor:
-                      'pointer',
-                  }}
+                  aria-label={`Conocer solución ${item.title}`}
                 >
-                  <div className="catalog-image">
-                    <span>
-                      {
-                        item.number
-                      }
+                  <div className="catalog-cover-media">
+                    <span className="catalog-cover-number">
+                      {item.number}
                     </span>
 
                     {item.coverImage ? (
@@ -2661,61 +2763,30 @@ function PublicSite() {
                         alt={
                           item.title
                         }
-                        style={{
-                          width:
-                            '100%',
-                          height:
-                            '100%',
-                          objectFit:
-                            'cover',
-                          display:
-                            'block',
-                        }}
+                        loading="lazy"
                       />
                     ) : (
                       <div className="catalog-placeholder">
                         <div className="catalog-shape"></div>
                       </div>
                     )}
+                    <span className="catalog-cover-wash" aria-hidden="true" />
                   </div>
 
-                  <div className="catalog-info">
-                    <div className="catalog-top">
-                      <p className="catalog-category">
-                        {
-                          item.category
-                        }
-                      </p>
-
-                      <span className="catalog-arrow">
-                        ↗
-                      </span>
-                    </div>
-
-                    <h3>
-                      {
-                        item.title
-                      }
-                    </h3>
-
-                    <p className="catalog-description">
-                      {
-                        item.description
-                      }
+                  <div className="catalog-cover-copy">
+                    <p className="catalog-category">
+                      {item.category || 'SOLUCIÓN DIGITAL'}
                     </p>
 
-                    <div className="catalog-bottom">
-                      <strong>
-                        {item.price ||
-                          '$ Consultar'}
-                      </strong>
+                    <h3>{item.title}</h3>
 
-                      <span>
-                        Ver ficha
-                        <span>
-                          ↗
-                        </span>
-                      </span>
+                    <p className="catalog-description">
+                      {item.description}
+                    </p>
+
+                    <div className="catalog-cover-action">
+                      <strong>{item.price || '$ Consultar'}</strong>
+                      <span>Conocé la solución <span aria-hidden="true">↗</span></span>
                     </div>
                   </div>
                 </article>
@@ -2734,22 +2805,32 @@ function PublicSite() {
         </button>
       </section>
 
+      <a className="faq-banner faq-between-sections" href="/preguntas-frecuentes" onClick={rememberFaqPosition}>
+        <span className="faq-banner-icon" aria-hidden="true">?</span>
+        <span className="faq-banner-copy"><span>ESTAMOS PARA AYUDARTE</span><strong>¿Te quedaron dudas?</strong><span>Encontrá respuestas sobre nuestras webs y cómo trabajamos.</span></span>
+        <span className="faq-banner-link">Ver preguntas frecuentes <span aria-hidden="true">↗</span></span>
+      </a>
+
       <section
         id="contacto"
         className="contact"
       >
+        <div className="contact-universe-decor" aria-hidden="true">
+          <span className="contact-universe-orbit contact-universe-orbit-one" />
+          <span className="contact-universe-orbit contact-universe-orbit-two" />
+          <span className="contact-universe-orbit contact-universe-orbit-three" />
+          <span className="contact-universe-star contact-universe-star-one" />
+          <span className="contact-universe-star contact-universe-star-two" />
+          <span className="contact-universe-star contact-universe-star-three" />
+          <span className="contact-universe-star contact-universe-star-four" />
+        </div>
         <div className="contact-inner">
           <div className="contact-header">
             <p className="section-label">
               {content.contact.eyebrow}
             </p>
 
-            <h2>
-              {
-                content.contact
-                  .title
-              }
-            </h2>
+            <h2>Hagamos realidad tu idea.</h2>
 
             <p>
               {
@@ -2842,16 +2923,6 @@ function PublicSite() {
             </button>
           </div>
         </div>
-
-        <a className="faq-banner" href="/preguntas-frecuentes">
-          <span className="faq-banner-icon" aria-hidden="true">?</span>
-          <span className="faq-banner-copy">
-            <span>ESTAMOS PARA AYUDARTE</span>
-            <strong>¿Te quedaron dudas?</strong>
-            <span>Encontrá respuestas sobre nuestras webs y cómo trabajamos.</span>
-          </span>
-          <span className="faq-banner-link">Ver preguntas frecuentes <span aria-hidden="true">↗</span></span>
-        </a>
 
         <div className="contact-footer">
           <div
