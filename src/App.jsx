@@ -2651,6 +2651,7 @@ function PublicSite() {
                       (name.includes('matero') ? '/portfolio-logos/Legado%20Matero.png' :
                        name.includes('magia') ? '/portfolio-logos/Magia%20Consciente.png' :
                        name.includes('gabriel') ? '/portfolio-logos/san-gabriel-transparent.png' :
+                       name.includes('deco hogar juany') ? '/portfolio-logos/deco-hogar-juany.png' :
                        project.coverImage || project.image)
                     return (
                       <button
